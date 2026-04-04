@@ -39,13 +39,16 @@ export const COLORS = {
   noGoRed:     '#E74C3C',
 } as const;
 
-// ── API Keys (replace with env vars before shipping) ─────
+// ── API Keys (read from app.config.js extra via expo-constants) ─────
+import Constants from 'expo-constants';
+const extra = Constants.expoConfig?.extra ?? {};
+
 export const API_KEYS = {
-  ANTHROPIC:     process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY    ?? '',
-  OPENWEATHER:   process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY  ?? '',
-  SUPABASE_URL:  process.env.EXPO_PUBLIC_SUPABASE_URL         ?? '',
-  SUPABASE_ANON: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY    ?? '',
-  STRIPE_PK:     process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
+  ANTHROPIC:     extra.ANTHROPIC_API_KEY     ?? '',
+  OPENWEATHER:   extra.OPENWEATHER_API_KEY   ?? '',
+  SUPABASE_URL:  extra.SUPABASE_URL          ?? '',
+  SUPABASE_ANON: extra.SUPABASE_ANON_KEY     ?? '',
+  STRIPE_PK:     extra.STRIPE_PUBLISHABLE_KEY ?? '',
 } as const;
 
 // ── External API Endpoints ────────────────────

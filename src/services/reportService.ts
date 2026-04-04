@@ -10,7 +10,8 @@ import { INSHORE_SPECIES, OFFSHORE_SPECIES, LIVE_BAIT, FROZEN_BAIT, ARTIFICIAL_B
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
+import Constants from 'expo-constants';
+const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
 
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
