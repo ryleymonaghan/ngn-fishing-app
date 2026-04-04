@@ -3,11 +3,14 @@
 // Uses Claude API to generate structured fishing reports
 // ─────────────────────────────────────────────
 
+import { Platform } from 'react-native';
 import { API_ENDPOINTS, API_KEYS, CLAUDE_CONFIG } from '@constants/index';
 import type { WizardDraft, LiveConditions, FishingReport } from '@app-types/index';
 import { INSHORE_SPECIES, OFFSHORE_SPECIES, LIVE_BAIT, FROZEN_BAIT, ARTIFICIAL_BAIT } from '@constants/index';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
 
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
@@ -114,30 +117,38 @@ Respond ONLY with valid JSON matching this exact schema:
 }
 
 // ── Call Claude API ───────────────────────────
+// On web: proxies through Railway backend (avoids CORS + keeps key server-side)
+// On native: calls Anthropic API directly
 async function callClaude(userPrompt: string): Promise<string> {
-  const res = await fetch(API_ENDPOINTS.ANTHROPIC, {
-    method: 'POST',
-    headers: {
-      'Content-Type':         'application/json',
-      'x-api-key':            API_KEYS.ANTHROPIC,
-      'anthropic-version':    '2023-06-01',
-      'anthropic-beta':       'web-search-2025-03-05', // enable web search for live regs
-    },
-    body: JSON.stringify({
-      model:      CLAUDE_CONFIG.MODEL,
-      max_tokens: CLAUDE_CONFIG.MAX_TOKENS,
-      system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-        },
-      ],
-      messages: [
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
+  let res: Response;
+
+  if (Platform.OS === 'web') {
+    res = await fetch(`${BACKEND_URL}/api/ngn/generate-report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt:     userPrompt,
+        system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
+        model:      CLAUDE_CONFIG.MODEL,
+        max_tokens: CLAUDE_CONFIG.MAX_TOKENS,
+      }),
+    });
+  } else {
+    res = await fetch(API_ENDPOINTS.ANTHROPIC, {
+      method: 'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':         API_KEYS.ANTHROPIC,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model:      CLAUDE_CONFIG.MODEL,
+        max_tokens: CLAUDE_CONFIG.MAX_TOKENS,
+        system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
+        messages:   [{ role: 'user', content: userPrompt }],
+      }),
+    });
+  }
 
   if (!res.ok) {
     const err = await res.text();
