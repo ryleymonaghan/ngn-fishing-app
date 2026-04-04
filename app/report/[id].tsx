@@ -1,0 +1,239 @@
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
+import { useReportStore } from '@stores/index';
+import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
+
+export default function ReportScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { activeReport, reports } = useReportStore();
+
+  const report: FishingReport | undefined =
+    id === 'latest'
+      ? activeReport ?? reports[0]
+      : reports.find((r) => r.id === id) ?? activeReport ?? undefined;
+
+  if (!report) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <View style={s.empty}>
+          <Text style={s.emptyText}>No report found.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const openMaps = (lat: number, lng: number, name: string) => {
+    const url = `maps://?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);
+    });
+  };
+
+  return (
+    <SafeAreaView style={s.safe} edges={['bottom']}>
+      <ScrollView contentContainerStyle={s.content}>
+
+        {/* Header */}
+        <Text style={s.genAt}>
+          Generated {new Date(report.generatedAt).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+          })}
+        </Text>
+
+        {/* Offshore Go/No-Go */}
+        {report.offshoreGoNoGo && (
+          <View style={[s.goNoGo, { borderColor: getGoNoGoColor(report.offshoreGoNoGo.status) }]}>
+            <Text style={[s.goNoGoLabel, { color: getGoNoGoColor(report.offshoreGoNoGo.status) }]}>
+              {report.offshoreGoNoGo.status === 'go'      ? 'GO'       :
+               report.offshoreGoNoGo.status === 'caution' ? 'CAUTION'  : 'NO GO'}
+            </Text>
+            <Text style={s.goNoGoReasoning}>{report.offshoreGoNoGo.reasoning}</Text>
+          </View>
+        )}
+
+        {/* Conditions Summary */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Conditions</Text>
+          <Text style={s.bodyText}>{report.conditionsSummary}</Text>
+        </View>
+
+        {/* Species Sections */}
+        {report.species.map((sp) => (
+          <SpeciesCard key={sp.speciesId} species={sp} onNavigate={openMaps} />
+        ))}
+
+        {/* Full Day Schedule */}
+        {report.schedule.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Full Day Schedule</Text>
+            {report.schedule.map((entry, i) => (
+              <ScheduleRow key={i} entry={entry} />
+            ))}
+          </View>
+        )}
+
+        {/* Bait Finder */}
+        {report.baitFinderTip && (
+          <View style={[s.card, s.baitCard]}>
+            <Text style={s.cardTitle}>Cast Net Bait Finder</Text>
+            <Text style={s.bodyText}>{report.baitFinderTip}</Text>
+          </View>
+        )}
+
+        {/* Pro Tips */}
+        {report.proTips.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Pro Tips</Text>
+            {report.proTips.map((tip, i) => (
+              <Text key={i} style={s.proTip}>• {tip}</Text>
+            ))}
+          </View>
+        )}
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function SpeciesCard({
+  species,
+  onNavigate,
+}: {
+  species: SpeciesSection;
+  onNavigate: (lat: number, lng: number, name: string) => void;
+}) {
+  return (
+    <View style={s.speciesCard}>
+      <Text style={s.speciesTitle}>{species.speciesName}</Text>
+      <Text style={s.biteWindow}>Bite window: {species.biteWindow}</Text>
+      <Text style={s.bodyText}>{species.biteWindowReasoning}</Text>
+
+      {/* Spots */}
+      {species.spots.map((spot) => (
+        <TouchableOpacity
+          key={spot.id}
+          style={s.spotRow}
+          onPress={() => onNavigate(spot.coordinates.lat, spot.coordinates.lng, spot.name)}
+          activeOpacity={0.75}
+        >
+          <View style={s.spotInfo}>
+            <Text style={s.spotName}>{spot.name}</Text>
+            {spot.depthFt && <Text style={s.spotDepth}>{spot.depthFt}</Text>}
+            <Text style={s.spotNotes}>{spot.notes}</Text>
+            {spot.arrivalTime && (
+              <Text style={s.arrivalTime}>Arrive by {spot.arrivalTime}</Text>
+            )}
+          </View>
+          <Text style={s.navIcon}>→ Maps</Text>
+        </TouchableOpacity>
+      ))}
+
+      {/* Rig */}
+      <View style={s.rigBox}>
+        <Text style={s.rigTitle}>Rig: {species.rig.name}</Text>
+        {species.rig.hookSize && <Text style={s.rigDetail}>Hook: {species.rig.hookSize}</Text>}
+        {species.rig.leader   && <Text style={s.rigDetail}>Leader: {species.rig.leader}</Text>}
+        {species.rig.weight   && <Text style={s.rigDetail}>Weight: {species.rig.weight}</Text>}
+        <Text style={s.rigDetail}>Presentation: {species.rig.baitPresentation}</Text>
+      </View>
+
+      <Text style={s.proTip}>💡 {species.proTip}</Text>
+
+      {/* Regs */}
+      <Text style={s.regsText}>
+        {species.regulations.state} regs: {species.regulations.sizeLimitIn} min · Bag limit: {species.regulations.bagLimit}
+      </Text>
+    </View>
+  );
+}
+
+function ScheduleRow({ entry }: { entry: ScheduleEntry }) {
+  return (
+    <View style={s.scheduleRow}>
+      <Text style={s.scheduleTime}>{entry.time}</Text>
+      <View style={s.scheduleInfo}>
+        <Text style={s.scheduleSpecies}>{entry.species}</Text>
+        <Text style={s.scheduleLocation}>{entry.location}</Text>
+        <Text style={s.scheduleTide}>{entry.tide} · {entry.rig}</Text>
+      </View>
+    </View>
+  );
+}
+
+function getGoNoGoColor(status: 'go' | 'caution' | 'no_go'): string {
+  return status === 'go' ? COLORS.success : status === 'caution' ? COLORS.warning : COLORS.danger;
+}
+
+const s = StyleSheet.create({
+  safe:            { flex: 1, backgroundColor: COLORS.navy },
+  content:         { padding: 20, paddingBottom: 48 },
+  empty:           { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyText:       { color: COLORS.textMuted, fontSize: 16 },
+  genAt:           { fontSize: 12, color: COLORS.textMuted, marginBottom: 16 },
+
+  goNoGo: {
+    borderWidth:   2,
+    borderRadius:  12,
+    padding:       16,
+    marginBottom:  16,
+  },
+  goNoGoLabel:     { fontSize: 22, fontWeight: '800', marginBottom: 6 },
+  goNoGoReasoning: { fontSize: 13, color: COLORS.textSecondary },
+
+  card: {
+    backgroundColor: COLORS.navyLight,
+    borderRadius:    12,
+    padding:         16,
+    marginBottom:    16,
+  },
+  baitCard:        { borderLeftWidth: 3, borderLeftColor: COLORS.seafoam },
+  cardTitle:       { fontSize: 16, fontWeight: '700', color: COLORS.white, marginBottom: 10 },
+  bodyText:        { fontSize: 14, color: COLORS.textSecondary, lineHeight: 21 },
+
+  speciesCard: {
+    backgroundColor: COLORS.navyLight,
+    borderRadius:    12,
+    padding:         16,
+    marginBottom:    16,
+    borderTopWidth:  3,
+    borderTopColor:  COLORS.seafoam,
+  },
+  speciesTitle:    { fontSize: 20, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
+  biteWindow:      { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', marginBottom: 6 },
+
+  spotRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    backgroundColor: `${COLORS.navy}80`,
+    borderRadius:    10,
+    padding:         12,
+    marginTop:       10,
+  },
+  spotInfo:        { flex: 1 },
+  spotName:        { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  spotDepth:       { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
+  spotNotes:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
+  arrivalTime:     { fontSize: 11, color: COLORS.seafoam, marginTop: 4, fontWeight: '600' },
+  navIcon:         { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', paddingLeft: 8 },
+
+  rigBox: {
+    backgroundColor: `${COLORS.ocean}30`,
+    borderRadius:    8,
+    padding:         12,
+    marginTop:       12,
+  },
+  rigTitle:        { fontSize: 13, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
+  rigDetail:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+
+  proTip:          { fontSize: 13, color: COLORS.sky, marginTop: 10, lineHeight: 20 },
+  regsText:        { fontSize: 11, color: COLORS.textMuted, marginTop: 8 },
+
+  scheduleRow:     { flexDirection: 'row', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: `${COLORS.white}15` },
+  scheduleTime:    { fontSize: 13, fontWeight: '700', color: COLORS.seafoam, width: 70 },
+  scheduleInfo:    { flex: 1 },
+  scheduleSpecies: { fontSize: 13, fontWeight: '600', color: COLORS.white },
+  scheduleLocation:{ fontSize: 12, color: COLORS.textSecondary },
+  scheduleTide:    { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+});

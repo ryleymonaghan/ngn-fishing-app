@@ -1,0 +1,323 @@
+// ─────────────────────────────────────────────
+// NGN Fishing — App Constants
+// All magic strings, numbers, and config live here.
+// Never hardcode values in components or services.
+// ─────────────────────────────────────────────
+
+// ── App ──────────────────────────────────────
+export const APP_NAME = 'NGN Fishing';
+export const APP_TAGLINE = 'Your AI fishing guide. No tip required.';
+export const APP_VERSION = '0.1.0';
+export const FREE_REPORT_LIMIT = 3;
+
+// ── Brand Colors ─────────────────────────────
+export const COLORS = {
+  // Primary palette
+  navy:        '#0A2540',
+  navyLight:   '#0E3560',
+  ocean:       '#1A6B8A',
+  seafoam:     '#4ECDC4',
+  sky:         '#87CEEB',
+  white:       '#FFFFFF',
+  offWhite:    '#F4F8FB',
+
+  // Semantic
+  success:     '#2ECC71',
+  warning:     '#F39C12',
+  danger:      '#E74C3C',
+  info:        '#3498DB',
+
+  // Text
+  textPrimary:   '#FFFFFF',
+  textSecondary: '#A8C4D4',
+  textMuted:     '#6B8FA8',
+
+  // Go/No-Go
+  goGreen:     '#2ECC71',
+  cautionAmber:'#F39C12',
+  noGoRed:     '#E74C3C',
+} as const;
+
+// ── API Keys (replace with env vars before shipping) ─────
+export const API_KEYS = {
+  ANTHROPIC:     process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY    ?? '',
+  OPENWEATHER:   process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY  ?? '',
+  SUPABASE_URL:  process.env.EXPO_PUBLIC_SUPABASE_URL         ?? '',
+  SUPABASE_ANON: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY    ?? '',
+  STRIPE_PK:     process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
+} as const;
+
+// ── External API Endpoints ────────────────────
+export const API_ENDPOINTS = {
+  // NOAA Tides & Currents
+  NOAA_TIDES:    'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter',
+  // NOAA NDBC Buoys (offshore wave/temp)
+  NOAA_NDBC:     'https://www.ndbc.noaa.gov/data/realtime2',
+  // OpenWeather
+  OPENWEATHER:   'https://api.openweathermap.org/data/2.5',
+  // Anthropic Claude
+  ANTHROPIC:     'https://api.anthropic.com/v1/messages',
+} as const;
+
+// ── NOAA Tide Stations ───────────────────────
+export const NOAA_STATIONS = {
+  CHARLESTON_HARBOR:  '8665530',
+  BEAUFORT_SC:        '8656483',
+  MYRTLE_BEACH:       '8661070',
+  WILMINGTON_NC:      '8658120',
+  SAVANNAH:           '8670870',
+  FERNANDINA_BEACH:   '8720030',
+  JACKSONVILLE:       '8720218',
+} as const;
+
+// ── NOAA NDBC Buoy IDs (offshore) ────────────
+export const NOAA_BUOYS = {
+  CHARLESTON_OFFSHORE: '41004', // 38nm SE of Charleston
+  CAPE_FEAR:           '41013',
+  SAVANNAH:            '41008',
+  CANAVERAL:           '41009',
+} as const;
+
+// ── Claude API Config ────────────────────────
+export const CLAUDE_CONFIG = {
+  MODEL:          'claude-sonnet-4-6',
+  MAX_TOKENS:     4096,
+  SYSTEM_PROMPT: `You are NGN Fishing — an elite AI fishing guide for the Southeast USA coast. 
+You have deep knowledge of inshore and offshore fishing from NC to FL, including tides, 
+species behavior, local regulations, tackle, and GPS waypoints. 
+You always respond in valid JSON matching the FishingReport schema. 
+Never hallucinate GPS coordinates — use real, known fishing locations only.`,
+} as const;
+
+// ── Stripe Product IDs ───────────────────────
+export const STRIPE_PRODUCTS = {
+  MONTHLY_PRICE_ID: 'price_REPLACE_MONTHLY',   // $4.99/mo
+  ANNUAL_PRICE_ID:  'price_REPLACE_ANNUAL',    // $29.99/yr
+} as const;
+
+export const PRICING = {
+  MONTHLY:      4.99,
+  ANNUAL:       29.99,
+  ANNUAL_LABEL: 'Save 50%',
+} as const;
+
+// ── Time Windows ─────────────────────────────
+export const TIME_WINDOWS = [
+  { id: 'morning',   label: 'Morning',       hours: '5am – 11am' },
+  { id: 'midday',    label: 'Midday',         hours: '11am – 2pm' },
+  { id: 'afternoon', label: 'Afternoon',      hours: '2pm – 6pm'  },
+  { id: 'evening',   label: 'Evening',        hours: '6pm – Dark' },
+  { id: 'full_day',  label: 'Full Day',       hours: 'Sunrise – Sunset' },
+] as const;
+
+export type TimeWindowId = typeof TIME_WINDOWS[number]['id'];
+
+// ── Access Types ─────────────────────────────
+export const ACCESS_TYPES = [
+  { id: 'boat',  label: 'Boat',  icon: 'boat'   },
+  { id: 'shore', label: 'Shore', icon: 'beach'  },
+  { id: 'dock',  label: 'Dock',  icon: 'anchor' },
+] as const;
+
+export type AccessTypeId = typeof ACCESS_TYPES[number]['id'];
+
+// ── Inshore Species ──────────────────────────
+export const INSHORE_SPECIES = [
+  {
+    id: 'flounder',
+    name: 'Flounder',
+    season: 'Year-round (best fall)',
+    scSizeIn: 12,
+    scBagLimit: 10,
+    tags: ['bottom', 'inshore'],
+  },
+  {
+    id: 'redfish',
+    name: 'Red Drum (Redfish)',
+    season: 'Year-round',
+    scSizeIn: '15–23" slot',
+    scBagLimit: 3,
+    tags: ['flats', 'inshore'],
+  },
+  {
+    id: 'speckled_trout',
+    name: 'Speckled Trout',
+    season: 'Year-round (best winter)',
+    scSizeIn: 14,
+    scBagLimit: 10,
+    tags: ['structure', 'inshore'],
+  },
+  {
+    id: 'sheepshead',
+    name: 'Sheepshead',
+    season: 'Year-round (best spring)',
+    scSizeIn: 10,
+    scBagLimit: 10,
+    tags: ['structure', 'inshore'],
+  },
+  {
+    id: 'black_drum',
+    name: 'Black Drum',
+    season: 'Year-round',
+    scSizeIn: 14,
+    scBagLimit: 5,
+    tags: ['bottom', 'inshore'],
+  },
+  {
+    id: 'tarpon',
+    name: 'Tarpon',
+    season: 'Spring–Fall',
+    scSizeIn: 'Catch & Release',
+    scBagLimit: 0,
+    tags: ['flats', 'inshore', 'trophy'],
+  },
+  {
+    id: 'cobia',
+    name: 'Cobia',
+    season: 'Spring migration',
+    scSizeIn: 33,
+    scBagLimit: 2,
+    tags: ['nearshore', 'inshore'],
+  },
+  {
+    id: 'spanish_mackerel',
+    name: 'Spanish Mackerel',
+    season: 'Spring–Fall',
+    scSizeIn: 12,
+    scBagLimit: 15,
+    tags: ['nearshore', 'inshore'],
+  },
+  {
+    id: 'king_mackerel',
+    name: 'King Mackerel',
+    season: 'Spring–Fall',
+    scSizeIn: 24,
+    scBagLimit: 3,
+    tags: ['nearshore', 'inshore'],
+  },
+  {
+    id: 'bull_shark',
+    name: 'Bull Shark',
+    season: 'Year-round',
+    scSizeIn: null,
+    scBagLimit: null,
+    tags: ['inshore', 'trophy'],
+  },
+] as const;
+
+// ── Offshore Species ─────────────────────────
+export const OFFSHORE_SPECIES = [
+  { id: 'mahi',        name: 'Mahi-Mahi',       season: 'Spring–Fall',    tags: ['pelagic', 'offshore'] },
+  { id: 'wahoo',       name: 'Wahoo',            season: 'Year-round',     tags: ['pelagic', 'offshore'] },
+  { id: 'yellowfin',   name: 'Yellowfin Tuna',   season: 'Year-round',     tags: ['pelagic', 'offshore'] },
+  { id: 'blackfin',    name: 'Blackfin Tuna',    season: 'Year-round',     tags: ['pelagic', 'offshore'] },
+  { id: 'gag_grouper', name: 'Gag Grouper',      season: 'Year-round',     tags: ['bottom', 'offshore'] },
+  { id: 'red_snapper', name: 'Red Snapper',      season: 'Limited season', tags: ['bottom', 'offshore'] },
+  { id: 'amberjack',   name: 'Amberjack',        season: 'Year-round',     tags: ['structure', 'offshore'] },
+  { id: 'sailfish',    name: 'Sailfish',          season: 'Winter–Spring',  tags: ['pelagic', 'offshore', 'trophy'] },
+] as const;
+
+// ── Special Packages ─────────────────────────
+export const SPECIAL_PACKAGES = [
+  {
+    id: 'lowcountry_grand_slam',
+    name: 'Lowcountry Grand Slam',
+    species: ['flounder', 'sheepshead', 'redfish', 'speckled_trout'],
+    description: 'The full Lowcountry day — 4 species, one tide cycle.',
+  },
+] as const;
+
+// ── Live Bait Options ────────────────────────
+export const LIVE_BAIT = [
+  { id: 'live_shrimp',    name: 'Live Shrimp',      inshore: true,  offshore: false },
+  { id: 'finger_mullet',  name: 'Finger Mullet',    inshore: true,  offshore: true  },
+  { id: 'mud_minnow',     name: 'Mud Minnow',       inshore: true,  offshore: false },
+  { id: 'fiddler_crab',   name: 'Fiddler Crab',     inshore: true,  offshore: false },
+  { id: 'blue_crab',      name: 'Blue Crab',        inshore: true,  offshore: false },
+  { id: 'pinfish',        name: 'Pinfish',           inshore: true,  offshore: true  },
+  { id: 'live_pogies',    name: 'Live Pogies (Menhaden)', inshore: true,  offshore: true  },
+] as const;
+
+export const FROZEN_BAIT = [
+  { id: 'frozen_shrimp',  name: 'Frozen Shrimp',   inshore: true,  offshore: false },
+  { id: 'frozen_mullet',  name: 'Frozen Mullet',   inshore: true,  offshore: true  },
+  { id: 'menhaden',       name: 'Menhaden (Pogies)', inshore: true, offshore: true  },
+  { id: 'squid',          name: 'Squid',            inshore: false, offshore: true  },
+  { id: 'ballyhoo',       name: 'Ballyhoo',         inshore: false, offshore: true  },
+  { id: 'rigged_mullet',  name: 'Rigged Mullet',   inshore: false, offshore: true  },
+] as const;
+
+export const ARTIFICIAL_BAIT = [
+  { id: 'soft_plastic',   name: 'Soft Plastics (Gulp/DOA)',  inshore: true,  offshore: false },
+  { id: 'gold_spoon',     name: 'Gold Johnson Spoon',         inshore: true,  offshore: false },
+  { id: 'topwater',       name: 'Topwater Plug',             inshore: true,  offshore: false },
+  { id: 'jig',            name: 'Bucktail / Jig',            inshore: true,  offshore: true  },
+  { id: 'mirrolure',      name: 'Mirrolure (Slow-Sink)',      inshore: true,  offshore: false },
+  { id: 'popping_cork',   name: 'Popping Cork Rig',          inshore: true,  offshore: false },
+] as const;
+
+// ── Go/No-Go Offshore Safety Thresholds ──────
+export const OFFSHORE_SAFETY = {
+  // Wave height (ft) vs boat length (ft) thresholds
+  GO_RATIO:      0.10,  // wave ≤ 10% of boat length = GO
+  CAUTION_RATIO: 0.18,  // wave ≤ 18% = CAUTION
+  // Above CAUTION_RATIO = NO GO
+  MIN_BOAT_LENGTH_FT: 18,
+  DEFAULT_BOAT_LENGTH_FT: 24,
+  DEFAULT_BOAT_SPEED_MPH: 25,
+} as const;
+
+// ── Solunar Rating Labels ─────────────────────
+export const SOLUNAR_RATINGS = {
+  EXCELLENT: { label: 'Excellent', min: 80, color: COLORS.success   },
+  GOOD:      { label: 'Good',      min: 60, color: COLORS.seafoam   },
+  FAIR:      { label: 'Fair',      min: 40, color: COLORS.warning   },
+  POOR:      { label: 'Poor',      min: 0,  color: COLORS.textMuted },
+} as const;
+
+// ── Alert Message Templates ──────────────────
+export const ALERT_TEMPLATES = {
+  MOVE_NOW:    (dest: string, mins: number) =>
+    `Leave now — ${mins} min to ${dest} to make peak bite window`,
+  TIDE_CHANGE: (type: string, mins: number) =>
+    `${type} tide in ${mins} min — position now`,
+  BITE_WINDOW: (species: string, location: string) =>
+    `${species} bite window open at ${location}`,
+} as const;
+
+// ── Navigation Routes ─────────────────────────
+export const ROUTES = {
+  TABS: {
+    HOME:    '/(tabs)/',
+    REPORTS: '/(tabs)/reports',
+    SPOTS:   '/(tabs)/spots',
+    PROFILE: '/(tabs)/profile',
+  },
+  WIZARD: {
+    STEP_1: '/wizard/step1',
+    STEP_2: '/wizard/step2',
+    STEP_3: '/wizard/step3',
+  },
+  REPORT: '/report/[id]',
+} as const;
+
+// ── Async Storage Keys ───────────────────────
+export const STORAGE_KEYS = {
+  AUTH_TOKEN:       'ngn:auth_token',
+  USER_PROFILE:     'ngn:user_profile',
+  REPORT_HISTORY:   'ngn:report_history',
+  REPORTS_USED:     'ngn:reports_used',
+  BOAT_LENGTH:      'ngn:boat_length',
+  BOAT_SPEED:       'ngn:boat_speed',
+  LAST_LOCATION:    'ngn:last_location',
+  WIZARD_DRAFT:     'ngn:wizard_draft',
+  SUBSCRIPTION:     'ngn:subscription',
+} as const;
+
+// ── Default Location (Johns Island / Charleston) ──
+export const DEFAULT_LOCATION = {
+  lat:    32.7488,
+  lng:   -80.0228,
+  label: 'Johns Island, SC',
+  noaaStation: '8665530',
+} as const;
