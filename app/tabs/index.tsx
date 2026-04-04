@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, ROUTES, APP_NAME, APP_TAGLINE, DEFAULT_LOCATION } from '@constants/index';
+import { COLORS, ROUTES, APP_NAME, APP_TAGLINE, APP_INTRO, DEFAULT_LOCATION } from '@constants/index';
 import { useConditionsStore } from '@stores/index';
 import type { UserLocation } from '@app-types/index';
 
@@ -61,6 +61,7 @@ export default function ConditionsScreen() {
         <View style={s.header}>
           <Text style={s.appName}>{APP_NAME}</Text>
           <Text style={s.tagline}>{APP_TAGLINE}</Text>
+          <Text style={s.intro}>{APP_INTRO}</Text>
         </View>
 
         {/* Loading */}
@@ -147,7 +148,8 @@ const s = StyleSheet.create({
   content:    { padding: 20, paddingBottom: 40 },
   header:     { marginBottom: 24 },
   appName:    { fontSize: 28, fontWeight: '700', color: COLORS.white, letterSpacing: 1 },
-  tagline:    { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
+  tagline:    { fontSize: 15, fontWeight: '600', color: COLORS.seafoam, marginTop: 4, letterSpacing: 0.5 },
+  intro:      { fontSize: 14, color: COLORS.textSecondary, marginTop: 12, lineHeight: 22 },
   loader:     { marginTop: 60 },
   errorCard:  { backgroundColor: COLORS.navyLight, borderRadius: 12, padding: 16, marginBottom: 16 },
   errorText:  { color: COLORS.danger, fontSize: 14 },

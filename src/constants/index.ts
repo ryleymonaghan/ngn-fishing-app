@@ -6,7 +6,8 @@
 
 // ── App ──────────────────────────────────────
 export const APP_NAME = 'NGN Fishing';
-export const APP_TAGLINE = 'Your AI fishing guide. No tip required.';
+export const APP_TAGLINE = 'No Guide Needed';
+export const APP_INTRO = `A great fisherman isn't lucky. They understand the importance of practice, patience, and skill. But every day, the conditions are different. Typically the ones who know? They fish daily — they're guides. Welcome to No Guide Needed.`;
 export const APP_VERSION = '0.1.0';
 export const FREE_REPORT_LIMIT = 3;
 
