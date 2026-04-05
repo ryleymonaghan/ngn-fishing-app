@@ -1,12 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Linking, Platform, ScrollView, Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, DEFAULT_LOCATION } from '@constants/index';
-import { useReportStore, useAuthStore } from '@stores/index';
+import { useReportStore, useAuthStore, useConditionsStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
+import { scoutNearbyStructure, type ScoutResult } from '@services/scoutService';
 import type { FishingSpot } from '@app-types/index';
 
 // react-native-maps doesn't support web — conditional import
@@ -48,6 +50,7 @@ type BaseMap = 'satellite' | 'ocean';
 export default function SpotsScreen() {
   const { reports, activeReport } = useReportStore();
   const { user } = useAuthStore();
+  const { conditions } = useConditionsStore();
   const router = useRouter();
   const [selectedSpot, setSelectedSpot] = useState<FishingSpot | null>(null);
   const [baseMap, setBaseMap] = useState<BaseMap>('satellite');
@@ -55,6 +58,12 @@ export default function SpotsScreen() {
   const [showLabels, setShowLabels] = useState(false);
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const mapRef = useRef<any>(null);
+
+  // ── Pin & Scout state ─────────────────────
+  const [droppedPin, setDroppedPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [scoutResults, setScoutResults] = useState<ScoutResult[] | null>(null);
+  const [scouting, setScouting] = useState(false);
+  const [selectedScout, setSelectedScout] = useState<ScoutResult | null>(null);
 
   const isPro = user?.subscription?.isActive ?? false;
 
@@ -104,6 +113,42 @@ export default function SpotsScreen() {
       );
     }
   }, [isPro, user?.email]);
+
+  // ── Long-press to drop pin ────────────────
+  const handleMapLongPress = useCallback((e: any) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    setDroppedPin({ lat: latitude, lng: longitude });
+    setScoutResults(null);
+    setSelectedScout(null);
+    setSelectedSpot(null);
+  }, []);
+
+  // ── Scout nearby structure from pinned location ──
+  const handleScout = useCallback(async () => {
+    if (!droppedPin) return;
+    setScouting(true);
+    try {
+      const results = await scoutNearbyStructure(
+        droppedPin.lat,
+        droppedPin.lng,
+        conditions?.tides?.currentTrend ?? 'rising',
+        conditions?.weather?.windSpeed ?? 10,
+        conditions?.weather?.windCardinal ?? 'SW',
+      );
+      setScoutResults(results);
+    } catch (err) {
+      Alert.alert('Scout Error', 'Could not analyze nearby structure. Try again.');
+    } finally {
+      setScouting(false);
+    }
+  }, [droppedPin, conditions]);
+
+  // ── Clear pin ─────────────────────────────
+  const clearPin = useCallback(() => {
+    setDroppedPin(null);
+    setScoutResults(null);
+    setSelectedScout(null);
+  }, []);
 
   // ── Web fallback (no react-native-maps on web) ────
   if (Platform.OS === 'web' || !MapView) {
@@ -193,6 +238,7 @@ export default function SpotsScreen() {
         showsUserLocation
         showsCompass
         showsScale
+        onLongPress={handleMapLongPress}
       >
         {/* ESRI Ocean Relief basemap (Pro) */}
         {baseMap === 'ocean' && isPro && UrlTile && (
@@ -242,6 +288,28 @@ export default function SpotsScreen() {
               spot.coordinates.lat, spot.coordinates.lng, spot.name
             )}
             onPress={() => setSelectedSpot(spot)}
+          />
+        ))}
+
+        {/* Dropped pin marker */}
+        {droppedPin && Marker && (
+          <Marker
+            coordinate={{ latitude: droppedPin.lat, longitude: droppedPin.lng }}
+            title="Your Pin"
+            description="Tap SCOUT to find nearby structure"
+            pinColor={COLORS.warning}
+          />
+        )}
+
+        {/* Scout result markers */}
+        {scoutResults && scoutResults.map((sr, i) => Marker && (
+          <Marker
+            key={`scout-${i}`}
+            coordinate={{ latitude: sr.lat, longitude: sr.lng }}
+            title={`${sr.direction} — ${sr.name}`}
+            description={`${sr.depthFt} · ${sr.structureType}`}
+            pinColor={sr.confidence === 'high' ? COLORS.success : sr.confidence === 'medium' ? COLORS.warning : COLORS.textMuted}
+            onPress={() => { setSelectedScout(sr); setSelectedSpot(null); }}
           />
         ))}
       </MapView>
@@ -305,6 +373,108 @@ export default function SpotsScreen() {
               <Text style={s.layerUpgradeText}>UNLOCK ALL LAYERS — $9.99/MO</Text>
             </TouchableOpacity>
           )}
+        </View>
+      )}
+
+      {/* ── Dropped Pin Action Bar ─────────── */}
+      {droppedPin && (
+        <View style={s.pinBar}>
+          <View style={s.pinBarInfo}>
+            <Text style={s.pinBarLabel}>📍 PIN DROPPED</Text>
+            <Text style={s.pinBarCoords}>
+              {droppedPin.lat.toFixed(4)}, {droppedPin.lng.toFixed(4)}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={s.scoutBtn}
+            onPress={handleScout}
+            disabled={scouting}
+            activeOpacity={0.85}
+          >
+            {scouting ? (
+              <ActivityIndicator size="small" color="#060E1A" />
+            ) : (
+              <Text style={s.scoutBtnText}>SCOUT</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={s.pinClearBtn} onPress={clearPin} activeOpacity={0.75}>
+            <Text style={s.pinClearText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Scout Results Card ─────────────── */}
+      {scoutResults && scoutResults.length > 0 && !selectedScout && (
+        <View style={s.scoutResultsPanel}>
+          <Text style={s.scoutResultsTitle}>NEARBY STRUCTURE FOUND</Text>
+          <Text style={s.scoutResultsSub}>Tap a result to see details and navigate</Text>
+          {scoutResults.map((sr, i) => (
+            <TouchableOpacity
+              key={`sr-${i}`}
+              style={s.scoutRow}
+              onPress={() => {
+                setSelectedScout(sr);
+                mapRef.current?.animateToRegion({
+                  latitude: sr.lat,
+                  longitude: sr.lng,
+                  latitudeDelta: 0.02,
+                  longitudeDelta: 0.02,
+                }, 500);
+              }}
+              activeOpacity={0.75}
+            >
+              <View style={[s.scoutDirBadge, {
+                backgroundColor: sr.confidence === 'high' ? COLORS.success :
+                  sr.confidence === 'medium' ? COLORS.warning : COLORS.textMuted
+              }]}>
+                <Text style={s.scoutDirText}>{sr.direction}</Text>
+              </View>
+              <View style={s.scoutRowInfo}>
+                <Text style={s.scoutRowName}>{sr.name}</Text>
+                <Text style={s.scoutRowMeta}>
+                  {sr.structureType} · {sr.depthFt} · {sr.distanceYds} yds {sr.direction}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* ── Selected Scout Detail ──────────── */}
+      {selectedScout && (
+        <View style={s.spotDetail}>
+          <View style={s.spotDetailHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.spotDetailName}>{selectedScout.name}</Text>
+              <Text style={s.spotDetailSpecies}>
+                {selectedScout.direction} · {selectedScout.structureType}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setSelectedScout(null)}>
+              <Text style={s.spotDetailClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.spotDetailDepth}>
+            Depth: {selectedScout.depthFt} · {selectedScout.distanceYds} yds from your pin
+          </Text>
+          <Text style={s.spotDetailNotes}>{selectedScout.why}</Text>
+          {selectedScout.species && selectedScout.species.length > 0 && (
+            <Text style={s.scoutSpeciesRow}>
+              🎣 Best for: {selectedScout.species.join(', ')}
+            </Text>
+          )}
+          {selectedScout.approach && (
+            <Text style={s.scoutApproach}>
+              📐 {selectedScout.approach}
+            </Text>
+          )}
+          <TouchableOpacity
+            style={s.spotDetailNav}
+            onPress={() => openNavigation(selectedScout.lat, selectedScout.lng, selectedScout.name)}
+            activeOpacity={0.85}
+          >
+            <Text style={s.spotDetailNavText}>NAVIGATE →</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -730,5 +900,130 @@ const s = StyleSheet.create({
     fontFamily: MONO,
     fontWeight: '600',
     marginTop: 8,
+  },
+
+  // ── Pin & Scout styles ────────────
+  pinBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+    padding: 10,
+  },
+  pinBarInfo: { flex: 1 },
+  pinBarLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.warning,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+  },
+  pinBarCoords: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 2,
+  },
+  scoutBtn: {
+    backgroundColor: COLORS.seafoam,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginLeft: 10,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  scoutBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  pinClearBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginLeft: 6,
+  },
+  pinClearText: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+  },
+
+  // ── Scout Results Panel ───────────
+  scoutResultsPanel: {
+    position: 'absolute',
+    bottom: 80,
+    left: 12,
+    right: 12,
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    padding: 12,
+    maxHeight: 300,
+  },
+  scoutResultsTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  scoutResultsSub: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    marginBottom: 10,
+  },
+  scoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: GRID_LINE,
+  },
+  scoutDirBadge: {
+    width: 32,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  scoutDirText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 1,
+  },
+  scoutRowInfo: { flex: 1 },
+  scoutRowName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.white,
+    fontFamily: MONO,
+  },
+  scoutRowMeta: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 2,
+  },
+  scoutSpeciesRow: {
+    fontSize: 11,
+    color: COLORS.seafoam,
+    marginBottom: 6,
+    lineHeight: 16,
+  },
+  scoutApproach: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginBottom: 10,
+    lineHeight: 16,
+    fontStyle: 'italic',
   },
 });
