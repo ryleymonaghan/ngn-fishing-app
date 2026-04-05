@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { fetchLiveConditions } from '@services/conditionsService';
 import { generateFishingReport } from '@services/reportService';
+import { supabase } from '@lib/supabase';
 import {
   STORAGE_KEYS,
   DEFAULT_LOCATION,
@@ -131,23 +132,63 @@ export const useAuthStore = create<AuthStore>()(
       user:      null,
       isLoading: false,
 
-      signIn: async (email, password) => {
+      signIn: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // TODO: Supabase auth integration
-          // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          set({ isLoading: false });
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          const session = data.session;
+          if (session?.user) {
+            set({
+              user: {
+                id:           session.user.id,
+                email:        session.user.email ?? email,
+                fullName:     session.user.user_metadata?.name ?? '',
+                reportsUsed:  0,
+                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
+                boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
+                boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
+                homeStation:  '8665530',
+                createdAt:    session.user.created_at ?? new Date().toISOString(),
+              },
+              isLoading: false,
+            });
+          }
         } catch (err: any) {
           set({ isLoading: false });
           throw err;
         }
       },
 
-      signUp: async (email, password, name) => {
+      signUp: async (email: string, password: string, name?: string) => {
         set({ isLoading: true });
         try {
-          // TODO: Supabase auth integration
-          set({ isLoading: false });
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { name: name ?? '' } },
+          });
+          if (error) throw error;
+          const session = data.session;
+          if (session?.user) {
+            set({
+              user: {
+                id:           session.user.id,
+                email:        session.user.email ?? email,
+                fullName:     name ?? '',
+                reportsUsed:  0,
+                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
+                boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
+                boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
+                homeStation:  '8665530',
+                createdAt:    session.user.created_at ?? new Date().toISOString(),
+              },
+              isLoading: false,
+            });
+          } else {
+            // Email confirmation required
+            set({ isLoading: false });
+          }
         } catch (err: any) {
           set({ isLoading: false });
           throw err;
@@ -155,11 +196,31 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signOut: async () => {
+        await supabase.auth.signOut();
         set({ user: null });
       },
 
       loadUser: async () => {
-        // TODO: Restore session from Supabase
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            set({
+              user: {
+                id:           session.user.id,
+                email:        session.user.email ?? '',
+                fullName:     session.user.user_metadata?.name ?? '',
+                reportsUsed:  0,
+                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
+                boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
+                boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
+                homeStation:  '8665530',
+                createdAt:    session.user.created_at ?? new Date().toISOString(),
+              },
+            });
+          }
+        } catch {
+          // No session — stay logged out
+        }
       },
 
       canGenerateReport: () => {

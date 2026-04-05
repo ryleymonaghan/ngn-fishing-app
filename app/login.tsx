@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, PRICING, FREE_REPORT_LIMIT } from '@constants/index';
 import { startCheckout } from '@services/stripeService';
+import { useAuthStore } from '@stores/index';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 
@@ -14,6 +15,7 @@ type Mode = 'login' | 'signup';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, signUp } = useAuthStore();
   const [mode, setMode] = useState<Mode>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,8 +30,11 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      // TODO: Wire to Supabase auth
-      // For now, skip auth and go to app
+      if (mode === 'login') {
+        await signIn(email, password);
+      } else {
+        await signUp(email, password, name);
+      }
       router.replace('/tabs' as any);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Authentication failed.');
