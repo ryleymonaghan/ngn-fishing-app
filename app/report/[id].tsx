@@ -1,11 +1,30 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
 import { useReportStore } from '@stores/index';
+import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
-import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
+
+function buildShareText(report: FishingReport): string {
+  const lines = [
+    `NGN Fishing Report — ${report.input?.date ?? ''}`,
+    ``,
+    `Conditions: ${report.conditionsSummary}`,
+    ``,
+    ...report.species.map((sp) => [
+      `${sp.speciesName}`,
+      `  Bite window: ${sp.biteWindow}`,
+      `  Top spot: ${sp.spots[0]?.name ?? '—'}`,
+      `  Rig: ${sp.rig.name}`,
+    ].join('\n')),
+    ``,
+    `Powered by NGN Fishing — No Guide Needed`,
+    `ngnfishing.com`,
+  ];
+  return lines.join('\n');
+}
 
 export default function ReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -94,6 +113,43 @@ export default function ReportScreen() {
             ))}
           </View>
         )}
+
+        {/* Share + Download */}
+        <View style={s.actionRow}>
+          <TouchableOpacity
+            style={s.actionBtn}
+            onPress={async () => {
+              try {
+                await Share.share({
+                  message: buildShareText(report),
+                  title: 'NGN Fishing Report',
+                });
+              } catch {}
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={s.actionBtnIcon}>↗</Text>
+            <Text style={s.actionBtnText}>SHARE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.actionBtn}
+            onPress={() => {
+              // On web: copy to clipboard. On native: share as text file
+              if (Platform.OS === 'web') {
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                  navigator.clipboard.writeText(buildShareText(report));
+                  Alert.alert('Copied', 'Report copied to clipboard.');
+                }
+              } else {
+                Share.share({ message: buildShareText(report), title: 'NGN Fishing Report' });
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={s.actionBtnIcon}>⬇</Text>
+            <Text style={s.actionBtnText}>DOWNLOAD</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Goin' Fishin' CTA */}
         <TouchableOpacity
@@ -251,6 +307,35 @@ const s = StyleSheet.create({
   scheduleSpecies: { fontSize: 13, fontWeight: '600', color: COLORS.white },
   scheduleLocation:{ fontSize: 12, color: COLORS.textSecondary },
   scheduleTide:    { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+
+  // Action buttons (share/download)
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 24,
+  },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: '#081E36',
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    paddingVertical: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionBtnIcon: {
+    fontSize: 16,
+    color: COLORS.seafoam,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
 
   // Goin' Fishin' CTA
   goinFishin: {

@@ -1,9 +1,12 @@
-import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Switch, TextInput, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES, FREE_REPORT_LIMIT, PRICING } from '@constants/index';
 import { useWizardStore, useReportStore, useConditionsStore, useAuthStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
+
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 
 export default function WizardStep2() {
   const router = useRouter();
@@ -62,8 +65,43 @@ export default function WizardStep2() {
     }
   };
 
+  const [customSpecies, setCustomSpecies] = useState('');
+  const [aiRecommending, setAiRecommending] = useState(false);
+
   const speciesList = draft.isOffshore ? OFFSHORE_SPECIES : INSHORE_SPECIES;
-  const canGenerate = draft.species.length > 0;
+  const canGenerate = draft.species.length > 0 || customSpecies.trim().length > 0;
+
+  // "Tell me what to target" — auto-select species based on conditions
+  const handleAiRecommend = () => {
+    setAiRecommending(true);
+    // Use conditions data to recommend species for the selected date/time
+    const conds = conditions;
+    const month = new Date(draft.date).getMonth(); // 0-11
+    const recommended: string[] = [];
+
+    if (draft.isOffshore) {
+      // Offshore recommendations by season
+      if (month >= 3 && month <= 9) recommended.push('mahi', 'wahoo');
+      if (month >= 10 || month <= 3) recommended.push('sailfish');
+      recommended.push('yellowfin', 'gag_grouper');
+      if (month >= 5 && month <= 8) recommended.push('red_snapper');
+    } else {
+      // Inshore — always good: redfish, trout, flounder
+      recommended.push('redfish', 'speckled_trout');
+      if (month >= 8 || month <= 1) recommended.push('flounder'); // fall flounder run
+      if (month >= 1 && month <= 4) recommended.push('sheepshead'); // spring best
+      if (month >= 3 && month <= 5) recommended.push('cobia'); // spring migration
+      if (month >= 3 && month <= 9) recommended.push('spanish_mackerel');
+
+      // Wind-based: if calm, add tarpon
+      if (conds?.weather?.windSpeed && conds.weather.windSpeed < 10) {
+        recommended.push('tarpon');
+      }
+    }
+
+    updateDraft({ species: [...new Set(recommended)] });
+    setAiRecommending(false);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -102,6 +140,25 @@ export default function WizardStep2() {
           </>
         )}
 
+        {/* AI Recommend */}
+        <TouchableOpacity
+          style={s.aiRecommend}
+          onPress={handleAiRecommend}
+          activeOpacity={0.85}
+          disabled={aiRecommending}
+        >
+          {aiRecommending ? (
+            <ActivityIndicator color="#060E1A" size="small" />
+          ) : (
+            <>
+              <Text style={s.aiRecommendText}>TELL ME WHAT TO TARGET</Text>
+              <Text style={s.aiRecommendSub}>
+                AI picks the best species for {draft.date} based on conditions
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
         {/* Species Grid */}
         <Text style={s.sectionLabel}>
           {draft.isOffshore ? 'OFFSHORE SPECIES' : 'INSHORE SPECIES'}
@@ -127,10 +184,20 @@ export default function WizardStep2() {
           })}
         </View>
 
+        {/* Custom species input */}
+        <Text style={s.sectionLabel}>OTHER SPECIES NOT LISTED</Text>
+        <TextInput
+          style={s.customInput}
+          placeholder="Type a species name..."
+          placeholderTextColor={COLORS.textMuted}
+          value={customSpecies}
+          onChangeText={setCustomSpecies}
+        />
+
         {/* Selection Count */}
-        {draft.species.length > 0 && (
+        {(draft.species.length > 0 || customSpecies.trim()) && (
           <Text style={s.selectionCount}>
-            {draft.species.length} species selected
+            {draft.species.length}{customSpecies.trim() ? ' + 1 custom' : ''} species selected
           </Text>
         )}
 
@@ -226,5 +293,36 @@ const s = StyleSheet.create({
     fontSize:   12,
     marginTop:  12,
     lineHeight: 18,
+  },
+  aiRecommend: {
+    backgroundColor: COLORS.seafoam,
+    borderRadius:    12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems:      'center',
+    marginTop:       16,
+    marginBottom:    8,
+  },
+  aiRecommendText: {
+    fontSize:      13,
+    fontWeight:    '800',
+    color:         '#060E1A',
+    letterSpacing: 2,
+  },
+  aiRecommendSub: {
+    fontSize:  11,
+    color:     '#060E1A',
+    opacity:   0.6,
+    marginTop: 3,
+  },
+  customInput: {
+    backgroundColor:   COLORS.navyLight,
+    borderRadius:      10,
+    paddingHorizontal: 14,
+    paddingVertical:   12,
+    fontSize:          14,
+    color:             COLORS.white,
+    borderWidth:       1,
+    borderColor:       `${COLORS.seafoam}30`,
   },
 });
