@@ -1,0 +1,81 @@
+{
+  "_comment": "NGN Fishing — App Store & Google Play metadata",
+
+  "appName": "NGN Fishing — No Guide Needed",
+  "subtitle": "AI Fishing Guide & GPS Spots",
+
+  "description": "Your AI fishing guide. No tip required.\n\nNGN Fishing replaces a $500 guided fishing charter with an AI guide in your pocket. Get real-time conditions, AI-generated fishing reports with GPS spots, species recommendations, rig setups, and move-timing alerts — all based on live tides, solunar data, and weather.\n\nBUILT BY A FISHERMAN, FOR FISHERMEN\nCreated by a 27-year residential builder and lifelong Charleston Lowcountry angler who got tired of paying guides to tell him what the data already shows.\n\nFEATURES:\n• AI Fishing Reports — Claude-powered reports with GPS coordinates, bite windows, rig recommendations, and full day schedules\n• Guide Me Now — One-tap instant recommendation based on current conditions\n• Live Conditions Dashboard — Real-time tides, solunar ratings, wind, water temp, and 3-day success probability forecast\n• GPS Spot Map — All report spots plotted with tap-to-navigate\n• Relief Shading (Pro) — ESRI Ocean bathymetric maps, NOAA nautical charts, and depth contours\n• Send to Chartplotter — Export spots as GPX files for Garmin, Lowrance, Humminbird, Simrad\n• Move-Timing Alerts — Push notifications when it's time to reposition for the next bite window\n• Trip Log — Record catches, rate trips, share photos with NGN branding\n• Share Reports — Send to friends or social media\n\nCOVERAGE:\nSoutheast USA coast — SC, NC, GA, FL. Inshore flats, nearshore structure, and offshore Gulf Stream.\n\nSPECIES:\nRedfish, Flounder, Speckled Trout, Sheepshead, Tarpon, Cobia, Mahi-Mahi, Wahoo, Yellowfin Tuna, Grouper, Snapper, and more.\n\nFREE TO START:\n3 free reports, then $9.99/month or $59.99/year for unlimited access + Pro map layers.\n\nA great fisherman isn't lucky. They understand practice, patience, and skill. But every day, the conditions are different. Welcome to No Guide Needed.",
+
+  "keywords": "fishing,fishing app,fishing guide,AI fishing,tide chart,solunar,GPS fishing spots,fishing report,inshore fishing,offshore fishing,redfish,flounder,trout,charleston fishing,lowcountry,nautical chart,relief shading,fishing map,boat fishing,saltwater fishing",
+
+  "categories": {
+    "primary": "Sports",
+    "secondary": "Weather"
+  },
+
+  "ageRating": "4+",
+  "contentRating": "Everyone",
+
+  "privacyPolicyUrl": "https://ngnfishing.com/privacy",
+  "termsOfServiceUrl": "https://ngnfishing.com/terms",
+  "supportUrl": "https://ngnfishing.com/support",
+  "marketingUrl": "https://ngnfishing.com",
+
+  "appleAppStoreInfo": {
+    "bundleId": "com.oakangeldigital.ngnfishing",
+    "sku": "ngnfishing001",
+    "primaryLocale": "en-US",
+    "availableInNewTerritories": true,
+    "priceTier": "Free with In-App Purchases",
+    "inAppPurchases": [
+      {
+        "productId": "ngn_pro_monthly",
+        "type": "Auto-Renewable Subscription",
+        "price": 9.99,
+        "period": "1 Month",
+        "groupName": "NGN Pro"
+      },
+      {
+        "productId": "ngn_pro_annual",
+        "type": "Auto-Renewable Subscription",
+        "price": 59.99,
+        "period": "1 Year",
+        "groupName": "NGN Pro"
+      }
+    ],
+    "requiredCapabilities": [
+      "Location Services (When In Use)",
+      "Push Notifications",
+      "Background Location Updates"
+    ]
+  },
+
+  "googlePlayInfo": {
+    "packageName": "com.oakangeldigital.ngnfishing",
+    "contentRating": "Everyone",
+    "targetSdkVersion": 34,
+    "category": "Sports",
+    "tags": ["Fishing", "Outdoors", "GPS", "Weather", "AI"]
+  },
+
+  "screenshotRequirements": {
+    "_comment": "Take these screenshots from the app for store listing",
+    "screens": [
+      "1. Conditions dashboard with tide curve + solunar + 3-day forecast",
+      "2. AI-generated fishing report showing species, GPS spots, and schedule",
+      "3. GPS Spot Map with ESRI Ocean relief shading (Pro layers visible)",
+      "4. Report wizard species selection with 'Tell Me What To Target' button",
+      "5. Trip log with catch photos and NGN branding",
+      "6. Guide Me Now one-tap generating state",
+      "7. GPX export / Send to Chartplotter screen",
+      "8. Push notification move-timing alert on lock screen"
+    ],
+    "sizes": {
+      "iPhone_6_7": "1290x2796",
+      "iPhone_6_5": "1284x2778",
+      "iPad_12_9": "2048x2732"
+    }
+  },
+
+  "reviewNotes": "Test account: demo@ngnfishing.com / TightLines2026!\n\nThe app requires location access for GPS fishing spots and tide station lookup. Push notifications are used for move-timing alerts while fishing. The backend API is hosted on Railway (ngn-fishing-backend-production.up.railway.app) and proxies weather data from OpenWeather and report generation from the Claude API.\n\nStripe handles subscription billing via redirect checkout (not embedded in the app). Relief shading map layers use ESRI and NOAA public tile services."
+}

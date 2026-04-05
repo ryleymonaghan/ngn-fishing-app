@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { fetchLiveConditions } from '@services/conditionsService';
 import { generateFishingReport } from '@services/reportService';
+import { saveReportToCloud, fetchReportsFromCloud, syncUserProfile } from '@services/supabaseSync';
 import { supabase } from '@lib/supabase';
 import {
   STORAGE_KEYS,
@@ -105,6 +106,11 @@ export const useReportStore = create<ReportStore>()(
             activeReport: report,
             isGenerating: false,
           }));
+          // Cloud sync — fire and forget
+          const userId = useAuthStore.getState().user?.id;
+          if (userId) {
+            saveReportToCloud(userId, report).catch(() => {});
+          }
         } catch (err: any) {
           set({ error: err.message, isGenerating: false });
           throw err;
@@ -139,20 +145,20 @@ export const useAuthStore = create<AuthStore>()(
           if (error) throw error;
           const session = data.session;
           if (session?.user) {
-            set({
-              user: {
-                id:           session.user.id,
-                email:        session.user.email ?? email,
-                fullName:     session.user.user_metadata?.name ?? '',
-                reportsUsed:  0,
-                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
-                boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
-                boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
-                homeStation:  '8665530',
-                createdAt:    session.user.created_at ?? new Date().toISOString(),
-              },
-              isLoading: false,
-            });
+            const userProfile = {
+              id:           session.user.id,
+              email:        session.user.email ?? email,
+              fullName:     session.user.user_metadata?.name ?? '',
+              reportsUsed:  0,
+              subscription: { isActive: false, tier: 'free' as const, expiresAt: undefined },
+              boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
+              boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
+              homeStation:  '8665530',
+              createdAt:    session.user.created_at ?? new Date().toISOString(),
+            };
+            set({ user: userProfile, isLoading: false });
+            // Sync profile to cloud
+            syncUserProfile(userProfile).catch(() => {});
           }
         } catch (err: any) {
           set({ isLoading: false });

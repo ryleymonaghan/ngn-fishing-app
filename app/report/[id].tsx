@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
 import { useReportStore } from '@stores/index';
+import { scheduleMoveAlerts, configureNotifications } from '@services/notificationService';
 import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
@@ -66,6 +68,7 @@ export default function ReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { activeReport, reports } = useReportStore();
+  const [alertsScheduled, setAlertsScheduled] = useState(false);
 
   const report: FishingReport | undefined =
     id === 'latest'
@@ -231,12 +234,34 @@ export default function ReportScreen() {
         {/* Goin' Fishin' CTA */}
         <TouchableOpacity
           style={s.goinFishin}
-          onPress={() => router.push('/tabs/triplog' as any)}
+          onPress={async () => {
+            // Schedule move-timing push notifications
+            if (!alertsScheduled && report.schedule.length > 0) {
+              try {
+                await configureNotifications();
+                const alerts = await scheduleMoveAlerts(report);
+                if (alerts.length > 0) {
+                  setAlertsScheduled(true);
+                  Alert.alert(
+                    'Alerts Armed 🎣',
+                    `${alerts.length} move-timing alerts scheduled. You'll get notified when it's time to reposition.`,
+                    [{ text: 'Tight Lines!', onPress: () => router.push('/tabs/triplog' as any) }]
+                  );
+                  return;
+                }
+              } catch {}
+            }
+            router.push('/tabs/triplog' as any);
+          }}
           activeOpacity={0.85}
         >
-          <Text style={s.goinFishinText}>GOIN' FISHIN' 🎣</Text>
+          <Text style={s.goinFishinText}>
+            {alertsScheduled ? 'ALERTS ARMED ✓' : "GOIN' FISHIN' 🎣"}
+          </Text>
           <Text style={s.goinFishinSub}>
-            Accept this report and log your trip when you're back
+            {alertsScheduled
+              ? 'Move alerts scheduled — tap to log your trip'
+              : 'Accept this report — we\'ll alert you when to move'}
           </Text>
         </TouchableOpacity>
 
