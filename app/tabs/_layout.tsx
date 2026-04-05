@@ -12,9 +12,9 @@ const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospa
 
 const MENU_ITEMS = [
   { route: '/tabs',          label: 'CONDITIONS',   icon: '◉' },
-  { route: '/tabs/reports',  label: 'MY REPORTS',   icon: '◫' },
   { route: '/tabs/spots',    label: 'SPOT MAP',     icon: '◎' },
-  { route: '/tabs/catches',  label: 'CATCHES',      icon: '◆' },
+  { route: '/tabs/reports',  label: 'PAST REPORTS', icon: '◫' },
+  { route: '/tabs/triplog',  label: 'TRIP LOG',     icon: '◆' },
   { route: '/tabs/profile',  label: 'PROFILE',      icon: '◇' },
 ];
 
@@ -69,8 +69,9 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen name="index"   options={{ title: 'NGN FISHING' }} />
-        <Tabs.Screen name="reports" options={{ title: 'REPORTS' }} />
+        <Tabs.Screen name="reports" options={{ title: 'PAST REPORTS' }} />
         <Tabs.Screen name="spots"   options={{ title: 'SPOT MAP', headerShown: false }} />
+        <Tabs.Screen name="triplog" options={{ title: 'TRIP LOG' }} />
         <Tabs.Screen name="catches" options={{ title: 'CATCHES' }} />
         <Tabs.Screen name="profile" options={{ title: 'PROFILE' }} />
       </Tabs>

@@ -1,12 +1,15 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
 import { useReportStore } from '@stores/index';
+
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
 
 export default function ReportScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { activeReport, reports } = useReportStore();
 
   const report: FishingReport | undefined =
@@ -91,6 +94,18 @@ export default function ReportScreen() {
             ))}
           </View>
         )}
+
+        {/* Goin' Fishin' CTA */}
+        <TouchableOpacity
+          style={s.goinFishin}
+          onPress={() => router.push('/tabs/triplog' as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={s.goinFishinText}>GOIN' FISHIN' 🎣</Text>
+          <Text style={s.goinFishinSub}>
+            Accept this report and log your trip when you're back
+          </Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
@@ -236,4 +251,26 @@ const s = StyleSheet.create({
   scheduleSpecies: { fontSize: 13, fontWeight: '600', color: COLORS.white },
   scheduleLocation:{ fontSize: 12, color: COLORS.textSecondary },
   scheduleTide:    { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+
+  // Goin' Fishin' CTA
+  goinFishin: {
+    backgroundColor: COLORS.success,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  goinFishinText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 3,
+  },
+  goinFishinSub: {
+    fontSize: 11,
+    color: '#060E1A',
+    marginTop: 4,
+    opacity: 0.7,
+  },
 });
