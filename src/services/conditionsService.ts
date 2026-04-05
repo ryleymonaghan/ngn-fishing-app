@@ -3,6 +3,8 @@
 // Fetches tides, weather, buoy data from NOAA + OpenWeather
 // ─────────────────────────────────────────────
 
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { API_ENDPOINTS, API_KEYS, NOAA_STATIONS, NOAA_BUOYS } from '@constants/index';
 import type {
   TideData,
@@ -12,6 +14,8 @@ import type {
   LiveConditions,
   UserLocation,
 } from '@app-types/index';
+
+const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
 
 // ── Tide Direction Helper ─────────────────────
 function getTideTrend(predictions: TideReading[]): 'rising' | 'falling' | 'slack' {
@@ -96,15 +100,23 @@ export async function fetchTideData(stationId: string): Promise<TideData> {
 }
 
 // ── Fetch OpenWeather Current ─────────────────
+// On web: proxies through Railway backend (keeps API key server-side)
+// On native: calls OpenWeather API directly
 export async function fetchWeatherData(lat: number, lng: number): Promise<WeatherData> {
-  const params = new URLSearchParams({
-    lat:   lat.toString(),
-    lon:   lng.toString(),
-    appid: API_KEYS.OPENWEATHER,
-    units: 'imperial',
-  });
+  let res: Response;
 
-  const res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/weather?${params}`);
+  if (Platform.OS === 'web') {
+    res = await fetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lng}`);
+  } else {
+    const params = new URLSearchParams({
+      lat:   lat.toString(),
+      lon:   lng.toString(),
+      appid: API_KEYS.OPENWEATHER,
+      units: 'imperial',
+    });
+    res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/weather?${params}`);
+  }
+
   if (!res.ok) throw new Error(`OpenWeather error: ${res.status}`);
 
   const json = await res.json();

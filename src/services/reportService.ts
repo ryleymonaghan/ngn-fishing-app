@@ -11,7 +11,7 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
 import Constants from 'expo-constants';
-const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
+const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app';
 
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
@@ -124,7 +124,7 @@ async function callClaude(userPrompt: string): Promise<string> {
   let res: Response;
 
   if (Platform.OS === 'web') {
-    res = await fetch(`${BACKEND_URL}/api/ngn/generate-report`, {
+    res = await fetch(`${BACKEND_URL}/api/generate-report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

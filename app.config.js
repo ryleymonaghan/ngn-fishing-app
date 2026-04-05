@@ -61,12 +61,12 @@ module.exports = {
       typedRoutes: true,
     },
     extra: {
-      OPENWEATHER_API_KEY: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY || '66b4ac2770c473fa38aa508040ec54d2',
+      OPENWEATHER_API_KEY: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY ?? '',
       ANTHROPIC_API_KEY: process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '',
       SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
-      BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app',
+      BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app',
       eas: {
         projectId: 'REPLACE_WITH_EAS_PROJECT_ID',
       },
