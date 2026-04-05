@@ -1,8 +1,9 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, LIVE_BAIT, FROZEN_BAIT, ARTIFICIAL_BAIT } from '@constants/index';
+import { COLORS, LIVE_BAIT, FROZEN_BAIT, ARTIFICIAL_BAIT, FISHING_LOCATIONS } from '@constants/index';
 import { useWizardStore, useReportStore, useConditionsStore } from '@stores/index';
+import { fetchLiveConditions } from '@services/conditionsService';
 
 type BaitType = 'live' | 'frozen' | 'artificial' | 'catching_own';
 
@@ -37,7 +38,29 @@ export default function WizardStep3() {
   const handleGenerate = async () => {
     if (!conditions) return;
     try {
-      await generateReport(draft, conditions);
+      // If user selected a different fishing location than phone GPS,
+      // re-fetch conditions for that location so tide/weather data matches
+      let reportConditions = conditions;
+      if (draft.fishingLocation) {
+        const selectedLoc = draft.fishingLocation;
+        const phoneLat = conditions.location.lat;
+        const phoneLng = conditions.location.lng;
+        // Only re-fetch if fishing location is significantly different from phone GPS (>0.1 deg ≈ 7 miles)
+        const dist = Math.sqrt((selectedLoc.lat - phoneLat) ** 2 + (selectedLoc.lng - phoneLng) ** 2);
+        if (dist > 0.1) {
+          // Find the matching NOAA station for this location
+          const preset = FISHING_LOCATIONS.find(
+            (fl) => fl.lat === selectedLoc.lat && fl.lng === selectedLoc.lng,
+          );
+          reportConditions = await fetchLiveConditions({
+            lat: selectedLoc.lat,
+            lng: selectedLoc.lng,
+            label: selectedLoc.label,
+            noaaStation: preset?.noaaStation,
+          });
+        }
+      }
+      await generateReport(draft, reportConditions);
       resetDraft();
       router.replace('/report/latest' as any);
     } catch {

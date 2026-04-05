@@ -100,15 +100,18 @@ function buildPrompt(draft: WizardDraft, conditions: LiveConditions): string {
 - Lighter tackle recommendations appropriate for kayak fishing`;
   }
 
+  // ── Location: prefer wizard-selected location over phone GPS ──
+  const fishingLocationLabel = draft.fishingLocation?.label ?? conditions.location.label ?? 'Southeast US coast';
+
   // ── Cleaner schema prompt — explicit enum values, no pipe syntax ──
   return `The angler is fishing on ${draft.date} during the ${draft.timeWindow.replace('_', ' ')} from ${accessDesc}.
-Location: ${conditions.location.label}.
+Location: ${fishingLocationLabel}.
 Target species: ${speciesContext}.
 Tide: ${tideInfo}.
 Weather: ${weatherInfo}.
 Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). Major periods: ${conditions.solunar.majorPeriods.join(', ')}.${offshoreContext}${deliveryContext}${shoreContext}${kayakContext}
 
-Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${conditions.location.label} and surrounding SE USA waters.
+Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${fishingLocationLabel} and surrounding SE USA waters.
 
 IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no explanation text before or after. The JSON must match this schema exactly:
 

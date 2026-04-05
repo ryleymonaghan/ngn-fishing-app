@@ -100,6 +100,11 @@ export interface WizardDraft {
   baitType: 'live' | 'frozen' | 'artificial' | 'catching_own';
   baitIds: string[];
   baitDeliveryMethod?: BaitDeliveryId;  // shore/surf only — drone, kite, kayak ferry, or standard cast
+  fishingLocation?: {    // Where the user intends to fish (overrides phone GPS)
+    lat: number;
+    lng: number;
+    label: string;       // 'Charleston, SC' or 'Myrtle Beach, SC'
+  };
 }
 
 // ── Fishing Spot ─────────────────────────────

@@ -344,3 +344,47 @@ export const DEFAULT_LOCATION = {
   label: 'Johns Island, SC',
   noaaStation: '8665530',
 } as const;
+
+// ── Fishing Location Presets (SE USA coverage) ───
+export interface FishingLocationPreset {
+  id: string;
+  label: string;
+  region: string;
+  lat: number;
+  lng: number;
+  noaaStation: string;
+}
+
+export const FISHING_LOCATIONS: FishingLocationPreset[] = [
+  // South Carolina
+  { id: 'charleston',      label: 'Charleston / Johns Island',   region: 'SC', lat: 32.7488,  lng: -80.0228, noaaStation: '8665530' },
+  { id: 'mt_pleasant',     label: 'Mt. Pleasant / Shem Creek',   region: 'SC', lat: 32.7876,  lng: -79.8643, noaaStation: '8665530' },
+  { id: 'folly_beach',     label: 'Folly Beach',                 region: 'SC', lat: 32.6552,  lng: -79.9403, noaaStation: '8665530' },
+  { id: 'isle_of_palms',   label: 'Isle of Palms / Sullivans',   region: 'SC', lat: 32.7866,  lng: -79.7545, noaaStation: '8665530' },
+  { id: 'kiawah',          label: 'Kiawah / Seabrook Island',    region: 'SC', lat: 32.6082,  lng: -80.0820, noaaStation: '8665530' },
+  { id: 'edisto',          label: 'Edisto Beach / Island',        region: 'SC', lat: 32.4874,  lng: -80.3024, noaaStation: '8665530' },
+  { id: 'hilton_head',     label: 'Hilton Head / Port Royal',     region: 'SC', lat: 32.2163,  lng: -80.7526, noaaStation: '8667633' },
+  { id: 'beaufort',        label: 'Beaufort / Lady\'s Island',    region: 'SC', lat: 32.4316,  lng: -80.6698, noaaStation: '8667633' },
+  { id: 'myrtle_beach',    label: 'Myrtle Beach',                region: 'SC', lat: 33.6891,  lng: -78.8867, noaaStation: '8661070' },
+  { id: 'pawleys',         label: 'Pawleys Island / Litchfield', region: 'SC', lat: 33.4271,  lng: -79.1256, noaaStation: '8661070' },
+  { id: 'georgetown',      label: 'Georgetown / Winyah Bay',     region: 'SC', lat: 33.3668,  lng: -79.2948, noaaStation: '8661070' },
+  { id: 'mcclellanville',  label: 'McClellanville / Cape Romain',region: 'SC', lat: 33.0846,  lng: -79.4617, noaaStation: '8665530' },
+  // North Carolina
+  { id: 'wilmington',      label: 'Wilmington / Wrightsville',   region: 'NC', lat: 34.2104,  lng: -77.7963, noaaStation: '8658120' },
+  { id: 'carolina_beach',  label: 'Carolina Beach / Kure',       region: 'NC', lat: 34.0352,  lng: -77.8936, noaaStation: '8658120' },
+  { id: 'southport',       label: 'Southport / Oak Island',      region: 'NC', lat: 33.9215,  lng: -78.0175, noaaStation: '8658120' },
+  { id: 'outer_banks',     label: 'Outer Banks / Hatteras',      region: 'NC', lat: 35.2316,  lng: -75.5475, noaaStation: '8654467' },
+  { id: 'morehead',        label: 'Morehead City / Beaufort NC', region: 'NC', lat: 34.7185,  lng: -76.7261, noaaStation: '8656483' },
+  // Georgia
+  { id: 'savannah',        label: 'Savannah / Tybee Island',     region: 'GA', lat: 32.0835,  lng: -81.0998, noaaStation: '8670870' },
+  { id: 'st_simons',       label: 'St. Simons / Jekyll Island',  region: 'GA', lat: 31.1506,  lng: -81.3690, noaaStation: '8677344' },
+  // Florida (NE)
+  { id: 'jax_beach',       label: 'Jacksonville Beach',          region: 'FL', lat: 30.2947,  lng: -81.3931, noaaStation: '8720218' },
+  { id: 'st_augustine',    label: 'St. Augustine',               region: 'FL', lat: 29.8947,  lng: -81.3145, noaaStation: '8720587' },
+  { id: 'daytona',         label: 'Daytona Beach',               region: 'FL', lat: 29.2108,  lng: -81.0228, noaaStation: '8721120' },
+  { id: 'cocoa_beach',     label: 'Cocoa Beach / Cape Canaveral',region: 'FL', lat: 28.3200,  lng: -80.6076, noaaStation: '8721604' },
+  { id: 'stuart',          label: 'Stuart / Jensen Beach',        region: 'FL', lat: 27.1976,  lng: -80.2528, noaaStation: '8722125' },
+];
+
+// Group locations by region for the picker
+export const LOCATION_REGIONS = ['SC', 'NC', 'GA', 'FL'] as const;

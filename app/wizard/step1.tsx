@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, TIME_WINDOWS, ACCESS_TYPES, BAIT_DELIVERY_METHODS, DELIVERY_ELIGIBLE_ACCESS, ROUTES } from '@constants/index';
-import { useWizardStore } from '@stores/index';
+import {
+  COLORS, TIME_WINDOWS, ACCESS_TYPES, BAIT_DELIVERY_METHODS,
+  DELIVERY_ELIGIBLE_ACCESS, ROUTES, FISHING_LOCATIONS, LOCATION_REGIONS, DEFAULT_LOCATION,
+} from '@constants/index';
+import { useWizardStore, useConditionsStore } from '@stores/index';
 import type { TimeWindowId, AccessTypeId, BaitDeliveryId } from '@constants/index';
 
 function getNextDays(count: number): string[] {
@@ -21,21 +24,123 @@ const DATE_OPTIONS = getNextDays(7);
 export default function WizardStep1() {
   const router = useRouter();
   const { draft, updateDraft, setStep } = useWizardStore();
+  const { conditions } = useConditionsStore();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+
+  // Auto-detect closest preset to phone GPS on mount
+  useEffect(() => {
+    if (draft.fishingLocation) return; // already set
+    const loc = conditions?.location;
+    if (!loc) return;
+    // Find closest preset
+    let closest = FISHING_LOCATIONS[0];
+    let minDist = Infinity;
+    for (const fl of FISHING_LOCATIONS) {
+      const d = Math.sqrt((fl.lat - loc.lat) ** 2 + (fl.lng - loc.lng) ** 2);
+      if (d < minDist) { minDist = d; closest = fl; }
+    }
+    updateDraft({
+      fishingLocation: { lat: closest.lat, lng: closest.lng, label: `${closest.label}, ${closest.region}` },
+    });
+  }, [conditions?.location]);
 
   const handleNext = () => {
     setStep(2);
     router.push(ROUTES.WIZARD.STEP_2 as any);
   };
 
-  const canProceed = draft.timeWindow && draft.accessType;
+  // Filter locations by search term + region
+  const filteredLocations = FISHING_LOCATIONS.filter((fl) => {
+    const matchSearch = !locationSearch || fl.label.toLowerCase().includes(locationSearch.toLowerCase());
+    const matchRegion = !selectedRegion || fl.region === selectedRegion;
+    return matchSearch && matchRegion;
+  });
+
+  const canProceed = draft.timeWindow && draft.accessType && draft.fishingLocation;
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
 
         <Text style={s.stepLabel}>STEP 1 OF 2</Text>
-        <Text style={s.title}>When are you fishing?</Text>
+        <Text style={s.title}>Where & when are you fishing?</Text>
+
+        {/* Location */}
+        <Text style={s.sectionLabel}>FISHING LOCATION</Text>
+        <TouchableOpacity
+          style={[s.dateRow, !draft.fishingLocation && s.locationEmpty]}
+          onPress={() => setShowLocationPicker(!showLocationPicker)}
+          activeOpacity={0.75}
+        >
+          <Text style={[s.dateText, !draft.fishingLocation && { color: COLORS.textMuted }]}>
+            {draft.fishingLocation?.label ?? 'Tap to select where you\'re fishing'}
+          </Text>
+          <Text style={s.dateToggle}>{showLocationPicker ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {showLocationPicker && (
+          <View style={s.locationPicker}>
+            {/* Search */}
+            <TextInput
+              style={s.locationSearch}
+              placeholder="Search locations..."
+              placeholderTextColor={COLORS.textMuted}
+              value={locationSearch}
+              onChangeText={setLocationSearch}
+              autoCapitalize="none"
+            />
+
+            {/* Region filter pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.regionScroll}>
+              <TouchableOpacity
+                style={[s.regionPill, !selectedRegion && s.regionPillActive]}
+                onPress={() => setSelectedRegion(null)}
+              >
+                <Text style={[s.regionPillText, !selectedRegion && s.regionPillTextActive]}>ALL</Text>
+              </TouchableOpacity>
+              {LOCATION_REGIONS.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[s.regionPill, selectedRegion === r && s.regionPillActive]}
+                  onPress={() => setSelectedRegion(selectedRegion === r ? null : r)}
+                >
+                  <Text style={[s.regionPillText, selectedRegion === r && s.regionPillTextActive]}>{r}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Location list */}
+            <View style={s.locationList}>
+              {filteredLocations.map((fl) => {
+                const isSelected = draft.fishingLocation?.lat === fl.lat && draft.fishingLocation?.lng === fl.lng;
+                return (
+                  <TouchableOpacity
+                    key={fl.id}
+                    style={[s.locationItem, isSelected && s.locationItemSelected]}
+                    onPress={() => {
+                      updateDraft({
+                        fishingLocation: { lat: fl.lat, lng: fl.lng, label: `${fl.label}, ${fl.region}` },
+                      });
+                      setShowLocationPicker(false);
+                      setLocationSearch('');
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[s.locationItemLabel, isSelected && s.locationItemLabelSelected]}>
+                      {fl.label}
+                    </Text>
+                    <Text style={[s.locationItemRegion, isSelected && s.locationItemRegionSelected]}>
+                      {fl.region}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Date */}
         <Text style={s.sectionLabel}>DATE</Text>
@@ -211,6 +316,47 @@ const s = StyleSheet.create({
   accessSub:          { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   accessSubSelected:  { color: COLORS.textSecondary },
   deliveryHint:       { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10, fontStyle: 'italic' },
+  locationEmpty:      { borderWidth: 1.5, borderColor: `${COLORS.warning}66` },
+  locationPicker:     { backgroundColor: COLORS.navyLight, borderRadius: 10, padding: 12, marginBottom: 8, maxHeight: 360 },
+  locationSearch: {
+    backgroundColor: '#0A2540',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.white,
+    fontSize: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#1A3A5C',
+  },
+  regionScroll:       { marginBottom: 10 },
+  regionPill: {
+    backgroundColor: '#0A2540',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#1A3A5C',
+  },
+  regionPillActive:   { borderColor: COLORS.seafoam, backgroundColor: `${COLORS.seafoam}15` },
+  regionPillText:     { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  regionPillTextActive: { color: COLORS.seafoam },
+  locationList:       { maxHeight: 220 },
+  locationItem: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A3A5C',
+  },
+  locationItemSelected:       { backgroundColor: `${COLORS.seafoam}12` },
+  locationItemLabel:          { fontSize: 14, color: COLORS.textSecondary, flex: 1 },
+  locationItemLabelSelected:  { color: COLORS.seafoam, fontWeight: '600' as const },
+  locationItemRegion:         { fontSize: 11, color: COLORS.textMuted, marginLeft: 8, fontWeight: '600' as const },
+  locationItemRegionSelected: { color: COLORS.seafoam },
   next: {
     backgroundColor: COLORS.seafoam,
     borderRadius:    14,
