@@ -17,6 +17,7 @@ const MENU_ITEMS = [
   { route: '/tabs/triplog',  label: 'TRIP LOG',     icon: '◆' },
   { route: '/tabs/knots',    label: 'KNOT GUIDE',   icon: '⚓' },
   { route: '/tabs/rigs',     label: 'RIG GUIDE',    icon: '⛏' },
+  { route: '/tabs/shop',     label: 'GEAR SHOP',    icon: '🛒' },
   { route: '/tabs/profile',  label: 'PROFILE',      icon: '◇' },
 ];
 
@@ -77,6 +78,7 @@ export default function TabLayout() {
         <Tabs.Screen name="catches" options={{ title: 'CATCHES' }} />
         <Tabs.Screen name="knots"   options={{ title: 'KNOT GUIDE' }} />
         <Tabs.Screen name="rigs"    options={{ title: 'RIG GUIDE' }} />
+        <Tabs.Screen name="shop"    options={{ title: 'GEAR SHOP' }} />
         <Tabs.Screen name="profile" options={{ title: 'PROFILE' }} />
       </Tabs>
 
