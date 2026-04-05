@@ -98,7 +98,19 @@ ngn-fishing-backend/
 - ⬜ Login/signup screen (Supabase Auth — dependency installed, not wired)
 - ⬜ Weekly forecast dashboard with catch probabilities
 - ⬜ "Guide Me Now" feature (auto-location + species + bait → best spot)
-- ⬜ Bathymetric/relief shading maps ($9.99/mo premium feature)
+- ⬜ Bathymetric relief shading map layer (premium add-on — see pricing below)
+  - Data: NOAA NCEI CUDEM bathymetric DEM tiles (free)
+  - Render: MapLibre GL terrain layer or pre-rendered NOAA ENC chart tiles
+  - Shows: depth contours, drop-offs, ledges, channels, oyster bars, troughs
+  - Unlock: included in subscription OR standalone $4.99/mo upsell (TBD)
+- ⬜ Scientific UI overhaul — homescreen redesign
+  - Dark navy (#0A2540) background, monospaced data readouts
+  - Real-time tide curve graph (not just text)
+  - Solunar timeline bar with highlighted bite windows
+  - Compact data density — 15+ data points visible without scrolling
+  - Gauge-style visualizations for wind/pressure/water temp
+  - Reference vibe: Windy.com pro, ship bridge instruments, Bloomberg Terminal
+  - Muted gray labels, teal (#4ECDC4) accent on live values
 - ⬜ Stripe subscriptions (products not created yet)
 - ⬜ Push notifications
 - ⬜ Supabase data persistence (reports saved locally only)
@@ -131,21 +143,26 @@ ngn-fishing-backend/
 
 ## Monetization
 - 3 free reports → paywall
-- $4.99/mo or $29.99/yr
-- Bathymetric maps: $9.99/mo (planned)
+- $4.99/mo or $29.99/yr (base subscription)
+- Bathymetric relief shading: pricing TBD — options:
+  - Option A: Bundle into a $9.99/mo "Pro" tier (reports + maps)
+  - Option B: Standalone $4.99/mo add-on on top of base sub
+  - Option C: Include in base sub as differentiator (no extra charge)
 
 ---
 
 ## Planned Features (Priority Order)
-1. Login screen + Supabase Auth (free preview, login for full access)
-2. Weekly forecast dashboard — 7-day catch probabilities factoring weather, tides, water temp, solunar, species seasonality
+1. Scientific UI overhaul — homescreen redesign (tactical ops console, not weather widget)
+2. Login screen + Supabase Auth (free preview, login for full access)
+3. Weekly forecast dashboard — 7-day catch probabilities factoring weather, tides, water temp, solunar, species seasonality
    - Three expandable categories: Inshore, Offshore Trolling, Offshore Reef/Bottom
    - Per-species percentage breakdowns
-3. "Guide Me Now" — auto-location, current species feeding, bait selection → best spot
-4. Bathymetric relief shading maps ($9.99/mo premium)
-5. Stripe integration
-6. Push notifications
-7. iOS/Android App Store submission
+4. "Guide Me Now" — auto-location, current species feeding, bait selection → best spot
+5. Bathymetric relief shading map layer (NOAA NCEI CUDEM data → MapLibre GL terrain)
+   - Pricing TBD: bundle in $9.99/mo tier OR standalone $4.99/mo add-on
+6. Stripe integration
+7. Push notifications
+8. iOS/Android App Store submission
 
 ---
 
