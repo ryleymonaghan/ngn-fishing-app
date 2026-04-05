@@ -23,6 +23,7 @@ export default function RootLayout() {
           contentStyle:     { backgroundColor: COLORS.navy },
         }}
       >
+        <Stack.Screen name="login"  options={{ headerShown: false }} />
         <Stack.Screen name="tabs"   options={{ headerShown: false }} />
         <Stack.Screen name="wizard" options={{ title: 'Generate Report', headerBackTitle: 'Back' }} />
         <Stack.Screen name="report" options={{ title: 'Fishing Report', headerBackTitle: 'Back' }} />

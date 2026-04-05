@@ -3,9 +3,10 @@
   "outputDirectory": "dist",
   "framework": null,
   "redirects": [
-    { "source": "/", "destination": "/tabs", "permanent": false }
+    { "source": "/", "destination": "/login", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
     { "source": "/tabs", "destination": "/tabs.html" },
     { "source": "/tabs/reports", "destination": "/tabs/reports.html" },
     { "source": "/tabs/spots", "destination": "/tabs/spots.html" },

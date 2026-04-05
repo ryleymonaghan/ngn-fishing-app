@@ -11,11 +11,11 @@ const DRAWER_WIDTH = 260;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 
 const MENU_ITEMS = [
-  { route: '/(tabs)/',        label: 'CONDITIONS',   icon: '◉' },
-  { route: '/(tabs)/reports', label: 'MY REPORTS',   icon: '◫' },
-  { route: '/(tabs)/spots',   label: 'SPOT MAP',     icon: '◎' },
-  { route: '/(tabs)/catches', label: 'CATCHES',      icon: '◆' },
-  { route: '/(tabs)/profile', label: 'PROFILE',      icon: '◇' },
+  { route: '/tabs',          label: 'CONDITIONS',   icon: '◉' },
+  { route: '/tabs/reports',  label: 'MY REPORTS',   icon: '◫' },
+  { route: '/tabs/spots',    label: 'SPOT MAP',     icon: '◎' },
+  { route: '/tabs/catches',  label: 'CATCHES',      icon: '◆' },
+  { route: '/tabs/profile',  label: 'PROFILE',      icon: '◇' },
 ];
 
 export default function TabLayout() {
@@ -94,8 +94,10 @@ export default function TabLayout() {
 
           {/* Nav items */}
           {MENU_ITEMS.map((item) => {
-            const active = pathname === item.route ||
-              (item.route === '/(tabs)/' && (pathname === '/tabs' || pathname === '/tabs/'));
+            const isHome = item.route === '/tabs';
+            const active = isHome
+              ? (pathname === '/' || pathname === '/tabs' || pathname === '/tabs/')
+              : pathname === item.route;
             return (
               <TouchableOpacity
                 key={item.route}
