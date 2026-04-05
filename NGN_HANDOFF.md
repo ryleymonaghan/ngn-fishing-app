@@ -1,133 +1,165 @@
-# NGN Fishing — Claude Code Handoff
-## Session 1 — April 4, 2026
+# NGN Fishing — Project Handoff
+## Updated April 5, 2026
 
 ---
 
-## Project Location
-~/Desktop/ngn-fishing-app
+## Architecture
 
-## Start Every Session
-cd ~/Desktop/ngn-fishing-app && claude
+### Frontend (Expo React Native + Web)
+- **Repo:** github.com/ryleymonaghan/ngn-fishing-app
+- **Hosting:** Vercel (auto-deploys on push to main)
+- **Domain:** ngnfishing.com
+- **Stack:** Expo SDK 52, React Native 0.76, TypeScript, Zustand, Expo Router
+- **Build:** `npx expo export --platform web` → output `dist/`
+- **Pre-push:** always run `npx tsc --noEmit` first
 
-## First Message to Claude Code
-Read /mnt/skills/user/ngn-fishing/SKILL.md then [state your goal]
+### Backend (Express/Node)
+- **Repo:** github.com/ryleymonaghan/ngn-fishing-backend
+- **Hosting:** Railway — project "genuine-flow" (auto-deploys on push to main)
+- **URL:** ngn-fishing-backend-production.up.railway.app
+- **Endpoints:**
+  - `GET /api/weather?lat=&lon=` — OpenWeather proxy
+  - `POST /api/generate-report` — Claude API proxy
+  - `GET /health` — service health check
+- **Env vars on Railway:** `OPENWEATHER_API_KEY`, `ANTHROPIC_API_KEY`
+
+### Design Decision: All API keys stay server-side on Railway
+- Web app proxies weather + report calls through the backend
+- Native app calls APIs directly (no CORS on mobile)
+- No API keys baked into client bundles
 
 ---
-
-## What's Built
-- 21-file Expo Router + TypeScript scaffold
-- React Native + Expo SDK 52
-- Zustand stores (conditions, wizard, reports, auth)
-- NOAA tides + OpenWeather + buoy services
-- Claude API report generation service
-- 3-step report wizard UI
-- Conditions dashboard
-- Report display screen with Maps navigation
-- Reports history tab
-- Profile tab with subscription UI
 
 ## File Structure
+```
 ngn-fishing-app/
-├── app.json
+├── app.config.js           ← Expo config (replaced app.json)
 ├── babel.config.js
 ├── package.json
 ├── tsconfig.json
-├── .env.local              ← API keys live here (never commit)
+├── vercel.json             ← Vercel deployment config
+├── .env.local              ← local dev API keys (never commit)
 ├── .env.example            ← template
-├── assets/                 ← placeholder PNGs (swap with real logo)
-│   ├── icon.png            ← 1024x1024 — export from Canva DAHF6-YhOaI
+├── assets/                 ← placeholder PNGs
+│   ├── icon.png
 │   ├── splash.png
 │   ├── adaptive-icon.png
 │   └── notification-icon.png
 ├── src/
-│   ├── constants/index.ts  ← ALL magic strings, colors, species, bait, routes
-│   ├── types/index.ts      ← full TypeScript types
-│   ├── stores/index.ts     ← Zustand stores
+│   ├── constants/index.ts  ← ALL config, colors, species, bait, routes
+│   ├── types/
+│   │   ├── index.ts        ← TypeScript interfaces
+│   │   └── uuid.d.ts       ← uuid type declaration
+│   ├── stores/index.ts     ← Zustand stores (conditions, wizard, reports, auth)
 │   └── services/
-│       ├── conditionsService.ts  ← NOAA + OpenWeather + buoy
-│       └── reportService.ts      ← Claude API report generation
+│       ├── conditionsService.ts  ← NOAA tides + weather + buoy + solunar
+│       └── reportService.ts     ← Claude API report generation
 └── app/
-    ├── _layout.tsx
+    ├── _layout.tsx         ← Root stack navigator
     ├── tabs/
-    │   ├── _layout.tsx
-    │   ├── index.tsx       ← Conditions dashboard (HOME SCREEN)
+    │   ├── _layout.tsx     ← Tab navigator (Conditions, Reports, Spots, Profile)
+    │   ├── index.tsx       ← Home screen — conditions dashboard
     │   ├── reports.tsx     ← Report history
-    │   ├── spots.tsx       ← Saved spots (placeholder, v0.2)
+    │   ├── spots.tsx       ← Saved spots (placeholder)
     │   └── profile.tsx     ← Subscription + boat settings
     ├── wizard/
-    │   ├── step1.tsx       ← Date / time window / access type
+    │   ├── _layout.tsx
+    │   ├── step1.tsx       ← Date picker (7 days) + time window + access type
     │   ├── step2.tsx       ← Species selection (inshore/offshore toggle)
     │   └── step3.tsx       ← Bait selection + generate report
     └── report/
+        ├── _layout.tsx
         └── [id].tsx        ← Full report display + Maps navigation
+
+ngn-fishing-backend/
+├── index.js                ← Express server (weather proxy + report proxy)
+├── package.json
+└── .gitignore
+```
 
 ---
 
-## API Keys Status (.env.local)
-- EXPO_PUBLIC_ANTHROPIC_API_KEY     ✅ Set
-- EXPO_PUBLIC_OPENWEATHER_API_KEY   ✅ Set (regenerate — was exposed in chat)
-- EXPO_PUBLIC_SUPABASE_URL          ❌ Not set yet
-- EXPO_PUBLIC_SUPABASE_ANON_KEY     ❌ Not set yet
-- EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ❌ Not set yet
+## What's Working
+- ✅ Web app live at ngnfishing.com
+- ✅ Weather conditions loading (OpenWeather via backend proxy)
+- ✅ NOAA tides + buoy data
+- ✅ Solunar calculator (simplified)
+- ✅ Report generation via Claude API (proxied through backend)
+- ✅ 7-day date picker in wizard
+- ✅ 3-step report wizard (date → species → bait → generate)
+- ✅ Report display with GPS spot navigation (Maps links)
+- ✅ Report history tab
+- ✅ Profile tab with subscription UI placeholder
+- ✅ Auto-deploy: push to GitHub → Vercel (frontend) / Railway (backend)
+- ✅ Web-safe location detection (browser geolocation on web, expo-location on native)
+- ✅ @types alias fixed to @app-types (TypeScript compatibility)
+
+## What's Not Built Yet
+- ⬜ Login/signup screen (Supabase Auth — dependency installed, not wired)
+- ⬜ Weekly forecast dashboard with catch probabilities
+- ⬜ "Guide Me Now" feature (auto-location + species + bait → best spot)
+- ⬜ Bathymetric/relief shading maps ($9.99/mo premium feature)
+- ⬜ Stripe subscriptions (products not created yet)
+- ⬜ Push notifications
+- ⬜ Supabase data persistence (reports saved locally only)
+- ⬜ iOS/Android native builds (EAS Build)
+- ⬜ App Store submission
 
 ---
 
 ## Brand
-- App name: NGN Fishing
-- Full name: No Guide Needed™
-- Tagline: "Your AI fishing guide. No tip required."
-- Domain: ngnfishing.com ✅ REGISTERED
-- Canva logo: DAHF6-YhOaI
-- Canva edit URL: https://www.canva.com/d/Dk92jBbgduFn5HN
-- Primary color: #0A2540 (navy)
-- Accent: #4ECDC4 (seafoam)
-- Trademark: NGN FISHING™ — NOT YET FILED (IC 042, TEAS Plus, $350)
+- **App name:** NGN Fishing
+- **Full name:** No Guide Needed™
+- **Tagline:** "No Guide Needed"
+- **Intro:** "A great fisherman isn't lucky. They understand the importance of practice, patience, and skill. But every day, the conditions are different. Typically the ones who know? They fish daily — they're guides. Welcome to No Guide Needed."
+- **Domain:** ngnfishing.com ✅ live
+- **Canva logo:** DAHF6-YhOaI
+- **Primary color:** #0A2540 (navy)
+- **Accent:** #4ECDC4 (seafoam)
 
 ---
 
-## MVP Build Order (current status)
-1. ✅ Expo scaffold — done
-2. 🔄 Live conditions screen — wired, needs iOS test
-3. ⬜ Report wizard UI — built, needs real test
-4. ⬜ Claude API report generation — built, needs real test
-5. ⬜ GPS spot map — built (Maps navigation), needs test
-6. ⬜ Stripe subscriptions
-7. ⬜ Supabase auth
-8. ⬜ Push notifications
-9. ⬜ Offshore go/no-go
-10. ⬜ App Store submission
-
----
-
-## Immediate Next Steps (Session 2)
-1. Regenerate OpenWeather API key (old one exposed in chat)
-2. Get app booting on iOS simulator: npx expo start --ios
-3. Test conditions screen — live tide + weather data
-4. Fix any TypeScript errors
-5. Run through full wizard → generate a real report
-6. Verify Claude API returns structured JSON
-
----
-
-## Key Constants (from src/constants/index.ts)
-- FREE_REPORT_LIMIT = 3
-- PRICING.MONTHLY = $4.99
-- PRICING.ANNUAL = $29.99
-- DEFAULT_LOCATION = Johns Island, SC (32.7488, -80.0228)
-- NOAA Station: 8665530 (Charleston Harbor)
-- Claude model: claude-sonnet-4-6
-
----
+## Key Constants
+- `FREE_REPORT_LIMIT = 3`
+- `PRICING.MONTHLY = $4.99`
+- `PRICING.ANNUAL = $29.99`
+- `DEFAULT_LOCATION = Johns Island, SC (32.7488, -80.0228)`
+- `NOAA Station: 8665530 (Charleston Harbor)`
+- `Claude model: claude-sonnet-4-6`
+- `10 inshore species, 8 offshore species`
+- `7 live baits, 6 frozen baits, 6 artificial baits`
 
 ## Monetization
 - 3 free reports → paywall
 - $4.99/mo or $29.99/yr
-- Stripe products to create in dashboard:
-  - ngn_monthly — $4.99/mo
-  - ngn_annual — $29.99/yr
+- Bathymetric maps: $9.99/mo (planned)
 
 ---
 
-## SKILL.md Location
-/mnt/skills/user/ngn-fishing/SKILL.md
-Update this at end of every session.
+## Planned Features (Priority Order)
+1. Login screen + Supabase Auth (free preview, login for full access)
+2. Weekly forecast dashboard — 7-day catch probabilities factoring weather, tides, water temp, solunar, species seasonality
+   - Three expandable categories: Inshore, Offshore Trolling, Offshore Reef/Bottom
+   - Per-species percentage breakdowns
+3. "Guide Me Now" — auto-location, current species feeding, bait selection → best spot
+4. Bathymetric relief shading maps ($9.99/mo premium)
+5. Stripe integration
+6. Push notifications
+7. iOS/Android App Store submission
+
+---
+
+## Railway Projects Reference
+| Project | Service | Purpose |
+|---------|---------|---------|
+| genuine-flow | ngn-fishing-backend | NGN Fishing API (weather + report proxy) |
+| abundant-charisma | builderdeck-backend | BuilderDeck API (separate, no NGN code) |
+
+## Env Vars Reference
+**Railway (ngn-fishing-backend):**
+- `OPENWEATHER_API_KEY` ✅
+- `ANTHROPIC_API_KEY` ✅
+
+**Vercel (ngn-fishing-app):**
+- `EXPO_PUBLIC_BACKEND_URL` ✅
+- `EXPO_PUBLIC_OPENWEATHER_API_KEY` (set but unused — web proxies through backend)
