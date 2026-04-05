@@ -15,6 +15,8 @@ const MENU_ITEMS = [
   { route: '/tabs/spots',    label: 'SPOT MAP',     icon: '◎' },
   { route: '/tabs/reports',  label: 'PAST REPORTS', icon: '◫' },
   { route: '/tabs/triplog',  label: 'TRIP LOG',     icon: '◆' },
+  { route: '/tabs/knots',    label: 'KNOT GUIDE',   icon: '⚓' },
+  { route: '/tabs/rigs',     label: 'RIG GUIDE',    icon: '⛏' },
   { route: '/tabs/profile',  label: 'PROFILE',      icon: '◇' },
 ];
 
@@ -73,6 +75,8 @@ export default function TabLayout() {
         <Tabs.Screen name="spots"   options={{ title: 'SPOT MAP', headerShown: false }} />
         <Tabs.Screen name="triplog" options={{ title: 'TRIP LOG' }} />
         <Tabs.Screen name="catches" options={{ title: 'CATCHES' }} />
+        <Tabs.Screen name="knots"   options={{ title: 'KNOT GUIDE' }} />
+        <Tabs.Screen name="rigs"    options={{ title: 'RIG GUIDE' }} />
         <Tabs.Screen name="profile" options={{ title: 'PROFILE' }} />
       </Tabs>
 

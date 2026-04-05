@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES } from '@constants/index';
+import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN } from '@constants/index';
 import { useConditionsStore, useReportStore, useWizardStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
 
@@ -384,6 +384,9 @@ export default function ConditionsScreen() {
           </View>
         </View>
 
+        {/* Slogan */}
+        <Text style={s.slogan}>{APP_SLOGAN}</Text>
+
         {/* Thin scanline accent */}
         <View style={s.scanline} />
 
@@ -562,6 +565,15 @@ const s = StyleSheet.create({
     letterSpacing: 3,
     marginTop: -3,
     fontFamily: MONO,
+  },
+  slogan: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: -4,
+    letterSpacing: 0.5,
   },
   headerRight: { alignItems: 'flex-end' },
   headerTime: {
