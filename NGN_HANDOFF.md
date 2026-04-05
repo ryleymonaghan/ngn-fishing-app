@@ -178,7 +178,7 @@ ngn-fishing-backend/
 
 | Item | Status | Details |
 |------|--------|---------|
-| **Trademark** | ✅ FILED Apr 5, 2026 | "NGN FISHING" — Standard Character Mark, Class 042, Intent to Use, $550 paid |
+| **Trademark** | ✅ FILED Apr 5, 2026 | "NGN FISHING" — Serial #99745698, Standard Character Mark, Class 042, Intent to Use, $550 paid |
 | **Trademark owner** | Oak Angel Digital, LLC | Correspondence: rm@crsdevelopments.com |
 | **Trademark description** | Filed | "Software as a service (SaaS) services featuring software for providing artificial intelligence-generated fishing reports, real-time weather and tide conditions, GPS navigation to fishing locations, and species identification and recommendations" |
 | **Delaware LLC** | ⏳ Applied | Oak Angel Digital LLC — Delaware formation applied, site under maintenance for doc uploads. Call 302-739-3073 Mon morning. |
