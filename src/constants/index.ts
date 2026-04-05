@@ -120,12 +120,28 @@ export type TimeWindowId = typeof TIME_WINDOWS[number]['id'];
 
 // ── Access Types ─────────────────────────────
 export const ACCESS_TYPES = [
-  { id: 'boat',  label: 'Boat',  icon: 'boat'   },
-  { id: 'shore', label: 'Shore', icon: 'beach'  },
-  { id: 'dock',  label: 'Dock',  icon: 'anchor' },
+  { id: 'boat',   label: 'Boat',   icon: 'boat',   sub: 'Powerboat, center console, skiff' },
+  { id: 'kayak',  label: 'Kayak',  icon: 'kayak',  sub: 'Kayak or canoe — paddle power' },
+  { id: 'shore',  label: 'Shore',  icon: 'beach',  sub: 'Bank, dock, pier, jetty, bridge' },
+  { id: 'surf',   label: 'Surf',   icon: 'waves',  sub: 'Beach fishing — sand, breakers' },
+  { id: 'dock',   label: 'Dock',   icon: 'anchor', sub: 'Private or public dock' },
 ] as const;
 
 export type AccessTypeId = typeof ACCESS_TYPES[number]['id'];
+
+// ── Bait Delivery Methods (shore/surf only) ──
+// Fly bait out to deeper water for better results
+export const BAIT_DELIVERY_METHODS = [
+  { id: 'cast',  label: 'Cast Only',       sub: 'Standard rod cast — no assist' },
+  { id: 'drone', label: 'Drone Drop',      sub: 'Fly bait out via fishing drone' },
+  { id: 'kite',  label: 'Kite',            sub: 'Kite fishing — wind-powered bait placement' },
+  { id: 'kayak_ferry', label: 'Kayak Ferry', sub: 'Paddle bait out, fish from shore' },
+] as const;
+
+export type BaitDeliveryId = typeof BAIT_DELIVERY_METHODS[number]['id'];
+
+// Access types that support bait delivery options
+export const DELIVERY_ELIGIBLE_ACCESS = ['shore', 'surf'] as const;
 
 // ── Inshore Species ──────────────────────────
 export const INSHORE_SPECIES = [

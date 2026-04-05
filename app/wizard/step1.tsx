@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, TIME_WINDOWS, ACCESS_TYPES, ROUTES } from '@constants/index';
+import { COLORS, TIME_WINDOWS, ACCESS_TYPES, BAIT_DELIVERY_METHODS, DELIVERY_ELIGIBLE_ACCESS, ROUTES } from '@constants/index';
 import { useWizardStore } from '@stores/index';
-import type { TimeWindowId, AccessTypeId } from '@constants/index';
+import type { TimeWindowId, AccessTypeId, BaitDeliveryId } from '@constants/index';
 
 function getNextDays(count: number): string[] {
   const days: string[] = [];
@@ -96,19 +96,62 @@ export default function WizardStep1() {
         {/* Access Type */}
         <Text style={s.sectionLabel}>FISHING FROM</Text>
         <View style={s.rowGroup}>
-          {ACCESS_TYPES.map((a) => (
-            <TouchableOpacity
-              key={a.id}
-              style={[s.pill, draft.accessType === a.id && s.pillSelected]}
-              onPress={() => updateDraft({ accessType: a.id as AccessTypeId })}
-              activeOpacity={0.75}
-            >
-              <Text style={[s.pillText, draft.accessType === a.id && s.pillTextSelected]}>
-                {a.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {ACCESS_TYPES.map((a) => {
+            const selected = draft.accessType === a.id;
+            return (
+              <TouchableOpacity
+                key={a.id}
+                style={[s.accessCard, selected && s.accessCardSelected]}
+                onPress={() => {
+                  const update: any = { accessType: a.id as AccessTypeId };
+                  // Clear bait delivery if switching away from shore/surf
+                  if (!(DELIVERY_ELIGIBLE_ACCESS as readonly string[]).includes(a.id)) {
+                    update.baitDeliveryMethod = undefined;
+                  }
+                  updateDraft(update);
+                }}
+                activeOpacity={0.75}
+              >
+                <Text style={[s.accessLabel, selected && s.accessLabelSelected]}>
+                  {a.label}
+                </Text>
+                <Text style={[s.accessSub, selected && s.accessSubSelected]}>
+                  {a.sub}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        {/* Bait Delivery — only for shore/surf */}
+        {(DELIVERY_ELIGIBLE_ACCESS as readonly string[]).includes(draft.accessType) && (
+          <>
+            <Text style={s.sectionLabel}>BAIT DELIVERY METHOD</Text>
+            <Text style={s.deliveryHint}>
+              How are you getting bait to deeper water?
+            </Text>
+            <View style={s.rowGroup}>
+              {BAIT_DELIVERY_METHODS.map((d) => {
+                const selected = draft.baitDeliveryMethod === d.id;
+                return (
+                  <TouchableOpacity
+                    key={d.id}
+                    style={[s.accessCard, selected && s.accessCardSelected]}
+                    onPress={() => updateDraft({ baitDeliveryMethod: d.id as BaitDeliveryId })}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[s.accessLabel, selected && s.accessLabelSelected]}>
+                      {d.label}
+                    </Text>
+                    <Text style={[s.accessSub, selected && s.accessSubSelected]}>
+                      {d.sub}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Next */}
         <TouchableOpacity
@@ -153,17 +196,21 @@ const s = StyleSheet.create({
   optionSub:           { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   optionSubSelected:   { color: COLORS.textSecondary },
   rowGroup:      { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  pill: {
-    paddingHorizontal: 20,
-    paddingVertical:   10,
-    borderRadius:      20,
-    backgroundColor:   COLORS.navyLight,
-    borderWidth:       1.5,
-    borderColor:       'transparent',
+  accessCard: {
+    width: '47%' as any,
+    backgroundColor: COLORS.navyLight,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    marginBottom: 4,
   },
-  pillSelected:      { borderColor: COLORS.seafoam },
-  pillText:          { color: COLORS.textSecondary, fontWeight: '500', fontSize: 14 },
-  pillTextSelected:  { color: COLORS.seafoam },
+  accessCardSelected: { borderColor: COLORS.seafoam },
+  accessLabel:        { fontSize: 15, fontWeight: '600', color: COLORS.white },
+  accessLabelSelected:{ color: COLORS.seafoam },
+  accessSub:          { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  accessSubSelected:  { color: COLORS.textSecondary },
+  deliveryHint:       { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10, fontStyle: 'italic' },
   next: {
     backgroundColor: COLORS.seafoam,
     borderRadius:    14,

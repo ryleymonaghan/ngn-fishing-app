@@ -2,7 +2,7 @@
 // NGN Fishing — App Types
 // ─────────────────────────────────────────────
 
-import type { AccessTypeId, TimeWindowId } from '@constants/index';
+import type { AccessTypeId, TimeWindowId, BaitDeliveryId } from '@constants/index';
 
 // ── Location ─────────────────────────────────
 export interface Coordinates {
@@ -99,6 +99,7 @@ export interface WizardDraft {
   isOffshore: boolean;
   baitType: 'live' | 'frozen' | 'artificial' | 'catching_own';
   baitIds: string[];
+  baitDeliveryMethod?: BaitDeliveryId;  // shore/surf only — drone, kite, kayak ferry, or standard cast
 }
 
 // ── Fishing Spot ─────────────────────────────

@@ -56,13 +56,57 @@ function buildPrompt(draft: WizardDraft, conditions: LiveConditions): string {
       `Angler's boat: ${draft.boatLengthFt ?? 24} ft.`
     : '';
 
+  // ── Access type descriptions for the AI ──
+  const accessDescriptions: Record<string, string> = {
+    boat:  'a powerboat (center console / skiff) — full water access, can run to any spot',
+    kayak: 'a kayak/canoe — paddle-powered, limited range, stay within a few miles of launch, avoid heavy boat traffic areas',
+    shore: 'the shore (bank, dock, pier, jetty, or bridge) — land-based, limited to casting range from structure',
+    surf:  'the surf/beach — standing in the breakers or on the sand, casting into the ocean',
+    dock:  'a dock — stationary, fishing the structure and surrounding water',
+  };
+
+  const accessDesc = accessDescriptions[draft.accessType] ?? draft.accessType;
+
+  // ── Bait delivery context (shore/surf only) ──
+  let deliveryContext = '';
+  if (draft.baitDeliveryMethod && draft.baitDeliveryMethod !== 'cast') {
+    const deliveryDescriptions: Record<string, string> = {
+      drone: 'The angler has a FISHING DRONE to fly bait out to deeper water (200-500 yards offshore). Recommend optimal drop depths and GPS coordinates reachable by drone. Include drone-specific tips: wind limits, line management, drop technique.',
+      kite:  'The angler uses a KITE for bait delivery — wind-powered placement to get live bait beyond the breakers into deeper water. Include kite fishing tips: required wind speed, kite angle, release clip setup, best species for kite fishing from shore.',
+      kayak_ferry: 'The angler will KAYAK BAIT OUT then fish from shore — they paddle a baited rod to deeper water, set it in a sand spike or rod holder on shore, then wait. Recommend ideal distances and depths to ferry bait to.',
+    };
+    deliveryContext = `\n${deliveryDescriptions[draft.baitDeliveryMethod] ?? ''}`;
+  }
+
+  // ── Shore/surf specific guidance ──
+  let shoreContext = '';
+  if (draft.accessType === 'shore' || draft.accessType === 'surf') {
+    shoreContext = `\nIMPORTANT — This angler is LAND-BASED. All GPS spots must be accessible from shore/beach. Include:
+- Specific piers, jetties, bridges, or beach access points with parking info
+- Casting distance recommendations (typical shore cast = 50-100 yds)
+- Best tide stages for wade fishing or surf structure
+- Rig recommendations optimized for distance casting (heavier weights, aerodynamic rigs)
+- Species most realistic from ${draft.accessType} access`;
+  }
+
+  // ── Kayak specific guidance ──
+  let kayakContext = '';
+  if (draft.accessType === 'kayak') {
+    kayakContext = `\nIMPORTANT — This angler is in a KAYAK. Prioritize:
+- Spots within 2-3 miles of a public kayak launch
+- Sheltered creeks, flats, and marsh edges (avoid open ocean swells)
+- Anchor or drift fishing techniques suited to a kayak
+- Safety: avoid main shipping channels, stay aware of tidal current strength
+- Lighter tackle recommendations appropriate for kayak fishing`;
+  }
+
   // ── Cleaner schema prompt — explicit enum values, no pipe syntax ──
-  return `The angler is fishing on ${draft.date} during the ${draft.timeWindow.replace('_', ' ')} from a ${draft.accessType}.
+  return `The angler is fishing on ${draft.date} during the ${draft.timeWindow.replace('_', ' ')} from ${accessDesc}.
 Location: ${conditions.location.label}.
 Target species: ${speciesContext}.
 Tide: ${tideInfo}.
 Weather: ${weatherInfo}.
-Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). Major periods: ${conditions.solunar.majorPeriods.join(', ')}.${offshoreContext}
+Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). Major periods: ${conditions.solunar.majorPeriods.join(', ')}.${offshoreContext}${deliveryContext}${shoreContext}${kayakContext}
 
 Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${conditions.location.label} and surrounding SE USA waters.
 
