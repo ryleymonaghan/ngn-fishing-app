@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import {
@@ -9,6 +9,7 @@ import {
   OFFSHORE_SAFETY,
 } from '@constants/index';
 import { useAuthStore, useReportStore } from '@stores/index';
+import { startCheckout, openCustomerPortal } from '@services/stripeService';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuthStore();
@@ -23,6 +24,27 @@ export default function ProfileScreen() {
   const [boatSpeed, setBoatSpeed] = useState(
     String(user?.boatSpeedMph ?? OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH)
   );
+  const [checkoutLoading, setCheckoutLoading] = useState<'monthly' | 'annual' | null>(null);
+
+  const handleUpgrade = async (tier: 'monthly' | 'annual') => {
+    setCheckoutLoading(tier);
+    try {
+      await startCheckout(tier, user?.email);
+    } catch (err: any) {
+      Alert.alert('Checkout Error', err.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user?.email) return;
+    try {
+      await openCustomerPortal(user.email);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not open subscription manager.');
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure?', [
@@ -52,6 +74,13 @@ export default function ProfileScreen() {
                   ? `$${PRICING.ANNUAL}/yr · Renews ${user?.subscription.expiresAt ?? '—'}`
                   : `$${PRICING.MONTHLY}/mo · Renews ${user?.subscription.expiresAt ?? '—'}`}
               </Text>
+              <TouchableOpacity
+                style={s.manageBtn}
+                onPress={handleManageSubscription}
+                activeOpacity={0.8}
+              >
+                <Text style={s.manageBtnText}>Manage Subscription</Text>
+              </TouchableOpacity>
             </>
           ) : (
             <>
@@ -59,12 +88,32 @@ export default function ProfileScreen() {
                 Free — {reportsLeft} of {FREE_REPORT_LIMIT} reports remaining
               </Text>
               <View style={s.upgradeRow}>
-                <TouchableOpacity style={s.upgradePill} activeOpacity={0.8}>
-                  <Text style={s.upgradePillText}>Monthly · ${PRICING.MONTHLY}/mo</Text>
+                <TouchableOpacity
+                  style={s.upgradePill}
+                  activeOpacity={0.8}
+                  onPress={() => handleUpgrade('monthly')}
+                  disabled={checkoutLoading !== null}
+                >
+                  {checkoutLoading === 'monthly' ? (
+                    <ActivityIndicator color={COLORS.seafoam} size="small" />
+                  ) : (
+                    <Text style={s.upgradePillText}>Monthly · ${PRICING.MONTHLY}/mo</Text>
+                  )}
                 </TouchableOpacity>
-                <TouchableOpacity style={[s.upgradePill, s.upgradePillBest]} activeOpacity={0.8}>
-                  <Text style={s.upgradePillTextBest}>Annual · ${PRICING.ANNUAL}/yr</Text>
-                  <Text style={s.saveBadge}>{PRICING.ANNUAL_LABEL}</Text>
+                <TouchableOpacity
+                  style={[s.upgradePill, s.upgradePillBest]}
+                  activeOpacity={0.8}
+                  onPress={() => handleUpgrade('annual')}
+                  disabled={checkoutLoading !== null}
+                >
+                  {checkoutLoading === 'annual' ? (
+                    <ActivityIndicator color={COLORS.navy} size="small" />
+                  ) : (
+                    <>
+                      <Text style={s.upgradePillTextBest}>Annual · ${PRICING.ANNUAL}/yr</Text>
+                      <Text style={s.saveBadge}>{PRICING.ANNUAL_LABEL}</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </>
@@ -151,6 +200,15 @@ const s = StyleSheet.create({
   upgradePillText:    { fontSize: 15, fontWeight: '600', color: COLORS.seafoam },
   upgradePillTextBest:{ fontSize: 15, fontWeight: '700', color: COLORS.navy },
   saveBadge:          { fontSize: 11, color: COLORS.navy, marginTop: 2, fontWeight: '600' },
+  manageBtn: {
+    marginTop:       12,
+    borderWidth:     1,
+    borderColor:     COLORS.seafoam,
+    borderRadius:    10,
+    padding:         12,
+    alignItems:      'center' as const,
+  },
+  manageBtnText:     { fontSize: 14, fontWeight: '600', color: COLORS.seafoam },
   fieldLabel:         { fontSize: 13, color: COLORS.textSecondary, marginBottom: 6 },
   input: {
     backgroundColor: COLORS.navy,

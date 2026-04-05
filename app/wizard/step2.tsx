@@ -1,8 +1,9 @@
-import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES } from '@constants/index';
-import { useWizardStore, useReportStore, useConditionsStore } from '@stores/index';
+import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES, FREE_REPORT_LIMIT, PRICING } from '@constants/index';
+import { useWizardStore, useReportStore, useConditionsStore, useAuthStore } from '@stores/index';
+import { startCheckout } from '@services/stripeService';
 
 export default function WizardStep2() {
   const router = useRouter();
@@ -26,8 +27,32 @@ export default function WizardStep2() {
     updateDraft({ isOffshore: val, species: [] });
   };
 
+  const { canGenerateReport } = useAuthStore();
+
   const handleGenerate = async () => {
     if (!conditions) return;
+
+    // Paywall check — free users get FREE_REPORT_LIMIT reports
+    if (!canGenerateReport()) {
+      Alert.alert(
+        'Upgrade to Pro',
+        `You've used all ${FREE_REPORT_LIMIT} free reports. Upgrade to NGN Pro for unlimited reports, relief shading, GPS spots, and more.`,
+        [
+          { text: 'Maybe Later', style: 'cancel' },
+          {
+            text: `Monthly · $${PRICING.MONTHLY}/mo`,
+            onPress: () => startCheckout('monthly').catch(() => {}),
+          },
+          {
+            text: `Annual · $${PRICING.ANNUAL}/yr (Save 50%)`,
+            style: 'default',
+            onPress: () => startCheckout('annual').catch(() => {}),
+          },
+        ]
+      );
+      return;
+    }
+
     try {
       await generateReport(draft, conditions);
       resetDraft();
