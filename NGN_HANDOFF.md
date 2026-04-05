@@ -84,33 +84,26 @@ ngn-fishing-backend/
 - ✅ Weather conditions loading (OpenWeather via backend proxy)
 - ✅ NOAA tides + buoy data
 - ✅ Solunar calculator (simplified)
-- ✅ Report generation via Claude API (proxied through backend)
+- ✅ Report generation via Claude API (proxied through backend, 8192 max_tokens)
 - ✅ 7-day date picker in wizard
-- ✅ 3-step report wizard (date → species → bait → generate)
+- ✅ 2-step report wizard (date/time/access → species → generate) — AI recommends bait
 - ✅ Report display with GPS spot navigation (Maps links)
 - ✅ Report history tab
 - ✅ Profile tab with subscription UI placeholder
 - ✅ Auto-deploy: push to GitHub → Vercel (frontend) / Railway (backend)
 - ✅ Web-safe location detection (browser geolocation on web, expo-location on native)
 - ✅ @types alias fixed to @app-types (TypeScript compatibility)
+- ✅ Scientific UI homescreen — tactical ops console with tide curve, solunar timeline, bar gauges
+- ✅ 3-day success probability forecast (factors: solunar, tides, wind, rain)
+- ✅ GPS spot map tab with plotted markers + tap-to-navigate
+- ✅ Relief shading — ESRI Ocean basemap + NOAA nautical chart tile overlays
+- ✅ Truncated JSON repair in report parser (handles mid-response cutoffs)
+- ✅ Backend forecast proxy endpoint (`/api/forecast`)
 
 ## What's Not Built Yet
 - ⬜ Login/signup screen (Supabase Auth — dependency installed, not wired)
-- ⬜ Weekly forecast dashboard with catch probabilities
 - ⬜ "Guide Me Now" feature (auto-location + species + bait → best spot)
-- ⬜ Bathymetric relief shading map layer (premium add-on — see pricing below)
-  - Data: NOAA NCEI CUDEM bathymetric DEM tiles (free)
-  - Render: MapLibre GL terrain layer or pre-rendered NOAA ENC chart tiles
-  - Shows: depth contours, drop-offs, ledges, channels, oyster bars, troughs
-  - Unlock: included in subscription OR standalone $4.99/mo upsell (TBD)
-- ⬜ Scientific UI overhaul — homescreen redesign
-  - Dark navy (#0A2540) background, monospaced data readouts
-  - Real-time tide curve graph (not just text)
-  - Solunar timeline bar with highlighted bite windows
-  - Compact data density — 15+ data points visible without scrolling
-  - Gauge-style visualizations for wind/pressure/water temp
-  - Reference vibe: Windy.com pro, ship bridge instruments, Bloomberg Terminal
-  - Muted gray labels, teal (#4ECDC4) accent on live values
+- ⬜ Relief shading paywall (currently free — gate behind subscription TBD)
 - ⬜ Stripe subscriptions (products not created yet)
 - ⬜ Push notifications
 - ⬜ Supabase data persistence (reports saved locally only)
@@ -152,17 +145,13 @@ ngn-fishing-backend/
 ---
 
 ## Planned Features (Priority Order)
-1. Scientific UI overhaul — homescreen redesign (tactical ops console, not weather widget)
-2. Login screen + Supabase Auth (free preview, login for full access)
-3. Weekly forecast dashboard — 7-day catch probabilities factoring weather, tides, water temp, solunar, species seasonality
-   - Three expandable categories: Inshore, Offshore Trolling, Offshore Reef/Bottom
-   - Per-species percentage breakdowns
-4. "Guide Me Now" — auto-location, current species feeding, bait selection → best spot
-5. Bathymetric relief shading map layer (NOAA NCEI CUDEM data → MapLibre GL terrain)
-   - Pricing TBD: bundle in $9.99/mo tier OR standalone $4.99/mo add-on
-6. Stripe integration
-7. Push notifications
-8. iOS/Android App Store submission
+1. Login screen + Supabase Auth (free preview, login for full access)
+2. "Guide Me Now" — auto-location, current species feeding → best spot with AI bait rec
+3. Relief shading paywall — gate NOAA chart + ESRI ocean tiles behind subscription
+4. Stripe integration (ngn_monthly $4.99, ngn_annual $29.99)
+5. Push notifications (move-timing alerts on the water)
+6. Supabase data persistence (reports, saved spots, user profiles)
+7. iOS/Android App Store submission (EAS Build + 1024×1024 icon)
 
 ---
 

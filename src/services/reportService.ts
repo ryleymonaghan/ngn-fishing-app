@@ -60,12 +60,11 @@ function buildPrompt(draft: WizardDraft, conditions: LiveConditions): string {
   return `The angler is fishing on ${draft.date} during the ${draft.timeWindow.replace('_', ' ')} from a ${draft.accessType}.
 Location: ${conditions.location.label}.
 Target species: ${speciesContext}.
-Bait available: ${baitContext}.
 Tide: ${tideInfo}.
 Weather: ${weatherInfo}.
 Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). Major periods: ${conditions.solunar.majorPeriods.join(', ')}.${offshoreContext}
 
-Generate a complete fishing report. Use only REAL, known GPS coordinates for ${conditions.location.label} and surrounding SE USA waters.
+Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${conditions.location.label} and surrounding SE USA waters.
 
 IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no explanation text before or after. The JSON must match this schema exactly:
 
@@ -102,7 +101,7 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
         "weight": "e.g. 3/8 oz jig head",
         "baitPresentation": "how to present the bait"
       },
-      "baitRecommendation": "specific bait and why",
+      "baitRecommendation": "recommended bait (live, frozen, AND artificial options) with reasoning based on conditions",
       "anchoringStrategy": "how to position the boat/self",
       "proTip": "one specific, actionable tip for this species today",
       "regulations": {

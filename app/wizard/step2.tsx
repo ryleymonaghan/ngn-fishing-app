@@ -1,12 +1,14 @@
-import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES, ROUTES } from '@constants/index';
-import { useWizardStore } from '@stores/index';
+import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES } from '@constants/index';
+import { useWizardStore, useReportStore, useConditionsStore } from '@stores/index';
 
 export default function WizardStep2() {
   const router = useRouter();
-  const { draft, updateDraft, setStep } = useWizardStore();
+  const { draft, updateDraft, resetDraft } = useWizardStore();
+  const { generateReport, isGenerating, error } = useReportStore();
+  const { conditions } = useConditionsStore();
 
   const toggleSpecies = (id: string) => {
     const current = draft.species;
@@ -24,19 +26,25 @@ export default function WizardStep2() {
     updateDraft({ isOffshore: val, species: [] });
   };
 
-  const handleNext = () => {
-    setStep(3);
-    router.push(ROUTES.WIZARD.STEP_3 as any);
+  const handleGenerate = async () => {
+    if (!conditions) return;
+    try {
+      await generateReport(draft, conditions);
+      resetDraft();
+      router.replace('/report/latest' as any);
+    } catch {
+      // error shown in UI
+    }
   };
 
   const speciesList = draft.isOffshore ? OFFSHORE_SPECIES : INSHORE_SPECIES;
-  const canProceed  = draft.species.length > 0;
+  const canGenerate = draft.species.length > 0;
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
 
-        <Text style={s.stepLabel}>STEP 2 OF 3</Text>
+        <Text style={s.stepLabel}>STEP 2 OF 2</Text>
         <Text style={s.title}>What are you targeting?</Text>
 
         {/* Inshore / Offshore Toggle */}
@@ -101,15 +109,36 @@ export default function WizardStep2() {
           </Text>
         )}
 
-        {/* Next */}
+        {/* Error */}
+        {error && (
+          <View style={s.errorCard}>
+            <Text style={s.errorText}>Report generation failed: {error}</Text>
+          </View>
+        )}
+
+        {/* Generate CTA */}
         <TouchableOpacity
-          style={[s.next, !canProceed && s.nextDisabled]}
-          onPress={handleNext}
-          disabled={!canProceed}
+          style={[s.generate, (!canGenerate || isGenerating) && s.generateDisabled]}
+          onPress={handleGenerate}
+          disabled={!canGenerate || isGenerating}
           activeOpacity={0.85}
         >
-          <Text style={s.nextText}>Next: Choose Bait →</Text>
+          {isGenerating ? (
+            <View style={s.generatingRow}>
+              <ActivityIndicator color={COLORS.navy} />
+              <Text style={s.generateText}>  Generating your report...</Text>
+            </View>
+          ) : (
+            <Text style={s.generateText}>Generate My Report →</Text>
+          )}
         </TouchableOpacity>
+
+        {isGenerating && (
+          <Text style={s.generatingHint}>
+            Your AI guide is analyzing tides, solunar tables, and current conditions
+            to recommend the best bait, rigs, and spots. This takes about 15–20 seconds.
+          </Text>
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -134,14 +163,14 @@ const s = StyleSheet.create({
   packageDesc:  { fontSize: 12, color: COLORS.sky, marginTop: 3 },
   grid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   speciesChip: {
-    backgroundColor: COLORS.navyLight,
-    borderRadius:    10,
+    backgroundColor:   COLORS.navyLight,
+    borderRadius:      10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth:     1.5,
-    borderColor:     'transparent',
-    minWidth:        '45%',
-    flex:            1,
+    paddingVertical:   10,
+    borderWidth:       1.5,
+    borderColor:       'transparent',
+    minWidth:          '45%',
+    flex:              1,
   },
   speciesChipSelected:   { borderColor: COLORS.seafoam, backgroundColor: `${COLORS.seafoam}18` },
   speciesName:           { fontSize: 14, fontWeight: '600', color: COLORS.white },
@@ -154,7 +183,23 @@ const s = StyleSheet.create({
     textAlign:  'center',
     marginTop:  16,
   },
-  next:         { backgroundColor: COLORS.seafoam, borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginTop: 24 },
-  nextDisabled: { opacity: 0.4 },
-  nextText:     { fontSize: 16, fontWeight: '700', color: COLORS.navy },
+  errorCard:    { backgroundColor: `${COLORS.danger}22`, borderRadius: 10, padding: 14, marginTop: 16 },
+  errorText:    { color: COLORS.danger, fontSize: 13 },
+  generate: {
+    backgroundColor: COLORS.seafoam,
+    borderRadius:    14,
+    paddingVertical: 18,
+    alignItems:      'center',
+    marginTop:       32,
+  },
+  generateDisabled: { opacity: 0.4 },
+  generatingRow:    { flexDirection: 'row', alignItems: 'center' },
+  generateText:     { fontSize: 17, fontWeight: '700', color: COLORS.navy },
+  generatingHint: {
+    textAlign:  'center',
+    color:      COLORS.textMuted,
+    fontSize:   12,
+    marginTop:  12,
+    lineHeight: 18,
+  },
 });

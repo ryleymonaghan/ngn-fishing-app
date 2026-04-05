@@ -34,7 +34,7 @@ export default function WizardStep1() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
 
-        <Text style={s.stepLabel}>STEP 1 OF 3</Text>
+        <Text style={s.stepLabel}>STEP 1 OF 2</Text>
         <Text style={s.title}>When are you fishing?</Text>
 
         {/* Date */}

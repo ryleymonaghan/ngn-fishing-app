@@ -59,11 +59,31 @@ export interface SolunarData {
   minorPeriods: string[];
 }
 
+// ── 3-Day Forecast ──────────────────────────
+export interface DayForecast {
+  date: string;          // ISO date string (YYYY-MM-DD)
+  dayLabel: string;      // 'Today', 'Tomorrow', 'Wednesday'
+  weather: {
+    tempHigh: number;
+    tempLow: number;
+    windSpeed: number;
+    windCardinal: string;
+    conditions: string;
+    icon: string;
+    rainChance: number;  // 0–100
+  };
+  tideEvents: TideReading[];
+  solunar: SolunarData;
+  successProbability: number;  // 0–100 composite score
+  successLabel: string;        // 'Excellent', 'Good', 'Fair', 'Poor'
+}
+
 export interface LiveConditions {
   weather: WeatherData;
   tides: TideData;
   solunar: SolunarData;
   buoy?: BuoyData;
+  forecast?: DayForecast[];  // 3-day forecast
   fetchedAt: string;     // ISO string
   location: UserLocation;
 }

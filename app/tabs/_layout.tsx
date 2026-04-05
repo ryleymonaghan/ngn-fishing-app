@@ -33,8 +33,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="spots"
         options={{
-          title:       'Saved Spots',
-          tabBarLabel: 'Spots',
+          title:       'Spot Map',
+          tabBarLabel: 'Map',
+          headerShown: false,
         }}
       />
       <Tabs.Screen

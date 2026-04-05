@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS, ROUTES, DEFAULT_LOCATION } from '@constants/index';
 import { useConditionsStore } from '@stores/index';
-import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData } from '@app-types/index';
+import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast } from '@app-types/index';
 
 // ── Location helper ──────────────────────────────
 async function getUserLocation(): Promise<UserLocation> {
@@ -255,6 +255,39 @@ function OffshoreStatus({ buoy }: { buoy: BuoyData }) {
 }
 
 
+// ── 3-Day Success Forecast ───────────────────────
+function ForecastStrip({ forecast }: { forecast: DayForecast[] }) {
+  return (
+    <View style={sg.forecastContainer}>
+      {forecast.map((day, i) => {
+        const probColor = day.successProbability >= 80 ? COLORS.success
+          : day.successProbability >= 60 ? COLORS.seafoam
+          : day.successProbability >= 40 ? COLORS.warning
+          : COLORS.textMuted;
+        return (
+          <View key={day.date} style={[sg.forecastCard, i < forecast.length - 1 && sg.forecastCardBorder]}>
+            <Text style={sg.forecastDay}>{day.dayLabel.toUpperCase()}</Text>
+            {/* Success probability — big number */}
+            <Text style={[sg.forecastProb, { color: probColor }]}>{day.successProbability}%</Text>
+            <Text style={[sg.forecastLabel, { color: probColor }]}>{day.successLabel.toUpperCase()}</Text>
+            {/* Weather summary */}
+            <View style={sg.forecastDivider} />
+            <Text style={sg.forecastTemp}>{day.weather.tempHigh}°/{day.weather.tempLow}°</Text>
+            <Text style={sg.forecastWind}>{day.weather.windSpeed} mph {day.weather.windCardinal}</Text>
+            {day.weather.rainChance > 0 && (
+              <Text style={sg.forecastRain}>{day.weather.rainChance}% rain</Text>
+            )}
+            {/* Solunar + Tides */}
+            <View style={sg.forecastDivider} />
+            <Text style={sg.forecastSolunar}>SOL {day.solunar.rating}</Text>
+            <Text style={sg.forecastTides}>{day.tideEvents.length} tides</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ═══════════════════════════════════════════════════
 // MAIN SCREEN
 // ═══════════════════════════════════════════════════
@@ -342,6 +375,14 @@ export default function ConditionsScreen() {
             </View>
 
             <Text style={s.conditionsLabel}>{conditions.weather.conditions.toUpperCase()}</Text>
+
+            {/* ── 3-DAY FORECAST ────────────────── */}
+            {conditions.forecast && conditions.forecast.length > 0 && (
+              <>
+                <SectionHeader title="3-DAY FORECAST" />
+                <ForecastStrip forecast={conditions.forecast} />
+              </>
+            )}
 
             {/* ── TIDE SECTION ──────────────────── */}
             <SectionHeader title="TIDES" />
@@ -822,6 +863,77 @@ const sg = StyleSheet.create({
     color: COLORS.textMuted,
     fontFamily: MONO,
     letterSpacing: 1,
+  },
+
+  // Forecast strip
+  forecastContainer: {
+    flexDirection: 'row',
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    marginBottom: 12,
+  },
+  forecastCard: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
+  },
+  forecastCardBorder: {
+    borderRightWidth: 1,
+    borderRightColor: GRID_LINE,
+  },
+  forecastDay: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  forecastProb: {
+    fontSize: 28,
+    fontWeight: '800',
+    fontFamily: MONO,
+  },
+  forecastLabel: {
+    fontSize: 8,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginTop: -2,
+  },
+  forecastDivider: {
+    width: '60%',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: GRID_LINE,
+    marginVertical: 6,
+  },
+  forecastTemp: {
+    fontSize: 11,
+    color: COLORS.white,
+    fontFamily: MONO,
+    fontWeight: '600',
+  },
+  forecastWind: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 2,
+  },
+  forecastRain: {
+    fontSize: 9,
+    color: COLORS.info,
+    fontFamily: MONO,
+    marginTop: 1,
+  },
+  forecastSolunar: {
+    fontSize: 9,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+  },
+  forecastTides: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 1,
   },
 
   // Offshore

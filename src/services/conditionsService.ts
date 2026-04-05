@@ -13,9 +13,11 @@ import type {
   BuoyData,
   LiveConditions,
   UserLocation,
+  DayForecast,
+  SolunarData,
 } from '@app-types/index';
 
-const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://builderdeck-backend-production.up.railway.app';
+const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app';
 
 // ── Tide Direction Helper ─────────────────────
 function getTideTrend(predictions: TideReading[]): 'rising' | 'falling' | 'slack' {
@@ -188,14 +190,191 @@ function calcSolunar(date: Date, lat: number): { rating: number; majors: string[
   };
 }
 
+// ── Fetch 3-Day Weather Forecast ─────────────────
+async function fetchWeatherForecast(lat: number, lng: number): Promise<any[]> {
+  let res: Response;
+  if (Platform.OS === 'web') {
+    res = await fetch(`${BACKEND_URL}/api/forecast?lat=${lat}&lon=${lng}`);
+    if (!res.ok) return [];
+  } else {
+    const params = new URLSearchParams({
+      lat:   lat.toString(),
+      lon:   lng.toString(),
+      appid: API_KEYS.OPENWEATHER,
+      units: 'imperial',
+      cnt:   '24', // 8 per day × 3 days
+    });
+    res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/forecast?${params}`);
+  }
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.list ?? [];
+}
+
+// ── Fetch 3-Day NOAA Tide Predictions ────────────
+async function fetchTideForecast(stationId: string, days: number): Promise<TideReading[]> {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + days);
+  const endStr = endDate.toISOString().slice(0, 10).replace(/-/g, '');
+
+  const params = new URLSearchParams({
+    begin_date:  dateStr,
+    end_date:    endStr,
+    station:     stationId,
+    product:     'predictions',
+    datum:       'MLLW',
+    time_zone:   'lst_ldt',
+    interval:    'hilo',
+    units:       'english',
+    application: 'NGNFishing',
+    format:      'json',
+  });
+
+  const res = await fetch(`${API_ENDPOINTS.NOAA_TIDES}?${params}`);
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json.predictions ?? []).map((p: any) => ({
+    time:   new Date(p.t).toISOString(),
+    height: parseFloat(p.v),
+    type:   p.type as 'H' | 'L',
+  }));
+}
+
+// ── Success Probability Algorithm ────────────────
+// Factors: solunar, tide movement, wind, rain, pressure proxy
+function calcSuccessProbability(
+  solunar: SolunarData,
+  tideEvents: TideReading[],
+  windSpeed: number,
+  rainChance: number,
+): { score: number; label: string } {
+  let score = 0;
+
+  // Solunar: 0–35 points
+  score += (solunar.rating / 100) * 35;
+
+  // Tide movement: 0–25 points (more tide changes = more feeding activity)
+  const tideChanges = tideEvents.length;
+  score += Math.min(tideChanges * 6, 25);
+
+  // Wind: 0–20 points (5–15 mph ideal, <5 or >20 worse)
+  if (windSpeed >= 5 && windSpeed <= 15) score += 20;
+  else if (windSpeed < 5)  score += 12;
+  else if (windSpeed <= 20) score += 10;
+  else if (windSpeed <= 25) score += 5;
+  // >25 mph: 0 points
+
+  // Rain: 0–20 points (no rain = 20, heavy rain = 5)
+  score += Math.max(5, 20 - (rainChance / 100) * 15);
+
+  score = Math.min(100, Math.max(10, Math.round(score)));
+
+  const label =
+    score >= 80 ? 'Excellent' :
+    score >= 60 ? 'Good'      :
+    score >= 40 ? 'Fair'      : 'Poor';
+
+  return { score, label };
+}
+
+// ── Build 3-Day Forecast ─────────────────────────
+function buildDayForecasts(
+  weatherForecast: any[],
+  tideReadings: TideReading[],
+  lat: number,
+): DayForecast[] {
+  const days: DayForecast[] = [];
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  for (let i = 0; i < 3; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayLabel = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : dayNames[d.getDay()];
+
+    // Filter weather entries for this day
+    const dayWeather = weatherForecast.filter((w: any) => {
+      const wDate = new Date(w.dt * 1000).toISOString().slice(0, 10);
+      return wDate === dateStr;
+    });
+
+    // Extract daily highs/lows/conditions
+    let tempHigh = -999, tempLow = 999, windMax = 0, rainChance = 0;
+    let conditions = 'Clear', icon = '01d';
+    for (const w of dayWeather) {
+      const t = w.main?.temp ?? 70;
+      if (t > tempHigh) tempHigh = t;
+      if (t < tempLow) tempLow = t;
+      const ws = w.wind?.speed ?? 0;
+      if (ws > windMax) windMax = ws;
+      if (w.pop && w.pop * 100 > rainChance) rainChance = Math.round(w.pop * 100);
+      if (w.weather?.[0]) {
+        conditions = w.weather[0].description ?? 'Clear';
+        icon = w.weather[0].icon ?? '01d';
+      }
+    }
+    // Defaults if no forecast data
+    if (tempHigh === -999) tempHigh = 75;
+    if (tempLow === 999) tempLow = 60;
+
+    // Filter tide events for this day
+    const dayTides = tideReadings.filter(t => {
+      const tDate = new Date(t.time).toISOString().slice(0, 10);
+      return tDate === dateStr;
+    });
+
+    // Solunar for this day
+    const sol = calcSolunar(d, lat);
+    const solunarLabel =
+      sol.rating >= 80 ? 'Excellent' :
+      sol.rating >= 60 ? 'Good'      :
+      sol.rating >= 40 ? 'Fair'      : 'Poor';
+    const solunarData: SolunarData = {
+      rating:       sol.rating,
+      label:        solunarLabel,
+      majorPeriods: sol.majors,
+      minorPeriods: sol.minors,
+    };
+
+    // Compute success probability
+    const { score, label } = calcSuccessProbability(
+      solunarData, dayTides, windMax, rainChance
+    );
+
+    days.push({
+      date: dateStr,
+      dayLabel,
+      weather: {
+        tempHigh: Math.round(tempHigh),
+        tempLow:  Math.round(tempLow),
+        windSpeed: Math.round(windMax),
+        windCardinal: degreesToCardinal(dayWeather[0]?.wind?.deg ?? 0),
+        conditions,
+        icon,
+        rainChance,
+      },
+      tideEvents: dayTides,
+      solunar: solunarData,
+      successProbability: score,
+      successLabel: label,
+    });
+  }
+
+  return days;
+}
+
 // ── Main: Fetch All Conditions ─────────────────
 export async function fetchLiveConditions(location: UserLocation): Promise<LiveConditions> {
   const stationId = location.noaaStation ?? NOAA_STATIONS.CHARLESTON_HARBOR;
 
-  const [tides, weather, buoy] = await Promise.allSettled([
+  const [tides, weather, buoy, weatherForecast, tideForecast] = await Promise.allSettled([
     fetchTideData(stationId),
     fetchWeatherData(location.lat, location.lng),
     fetchBuoyData(NOAA_BUOYS.CHARLESTON_OFFSHORE),
+    fetchWeatherForecast(location.lat, location.lng),
+    fetchTideForecast(stationId, 3),
   ]);
 
   if (tides.status   === 'rejected') throw new Error(`Tide fetch failed: ${tides.reason}`);
@@ -207,6 +386,11 @@ export async function fetchLiveConditions(location: UserLocation): Promise<LiveC
     solunarResult.rating >= 60 ? 'Good'      :
     solunarResult.rating >= 40 ? 'Fair'      : 'Poor';
 
+  // Build 3-day forecast if data is available
+  const forecastWeatherData = weatherForecast.status === 'fulfilled' ? weatherForecast.value : [];
+  const forecastTideData    = tideForecast.status === 'fulfilled' ? tideForecast.value : [];
+  const forecast = buildDayForecasts(forecastWeatherData, forecastTideData, location.lat);
+
   return {
     weather:   weather.value,
     tides:     tides.value,
@@ -217,6 +401,7 @@ export async function fetchLiveConditions(location: UserLocation): Promise<LiveC
       minorPeriods: solunarResult.minors,
     },
     buoy:      buoy.status === 'fulfilled' ? buoy.value ?? undefined : undefined,
+    forecast,
     fetchedAt: new Date().toISOString(),
     location,
   };
