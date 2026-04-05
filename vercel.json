@@ -6,6 +6,14 @@
     { "source": "/", "destination": "/tabs", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/tabs", "destination": "/tabs.html" },
+    { "source": "/tabs/reports", "destination": "/tabs/reports.html" },
+    { "source": "/tabs/spots", "destination": "/tabs/spots.html" },
+    { "source": "/tabs/catches", "destination": "/tabs/catches.html" },
+    { "source": "/tabs/profile", "destination": "/tabs/profile.html" },
+    { "source": "/wizard/step1", "destination": "/wizard/step1.html" },
+    { "source": "/wizard/step2", "destination": "/wizard/step2.html" },
+    { "source": "/wizard/step3", "destination": "/wizard/step3.html" },
     { "source": "/report/:id", "destination": "/report/[id].html" }
   ]
 }
