@@ -3,10 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { COLORS, ROUTES, DEFAULT_LOCATION } from '@constants/index';
+import { COLORS, DEFAULT_LOCATION } from '@constants/index';
 import { useConditionsStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast } from '@app-types/index';
 
@@ -258,7 +257,9 @@ function OffshoreStatus({ buoy }: { buoy: BuoyData }) {
 // ── 3-Day Success Forecast ───────────────────────
 function ForecastStrip({ forecast }: { forecast: DayForecast[] }) {
   return (
-    <View style={sg.forecastContainer}>
+    <View>
+      <Text style={sg.forecastHeading}>SUCCESS PROBABILITY</Text>
+      <View style={sg.forecastContainer}>
       {forecast.map((day, i) => {
         const probColor = day.successProbability >= 80 ? COLORS.success
           : day.successProbability >= 60 ? COLORS.seafoam
@@ -285,6 +286,7 @@ function ForecastStrip({ forecast }: { forecast: DayForecast[] }) {
         );
       })}
     </View>
+    </View>
   );
 }
 
@@ -292,16 +294,11 @@ function ForecastStrip({ forecast }: { forecast: DayForecast[] }) {
 // MAIN SCREEN
 // ═══════════════════════════════════════════════════
 export default function ConditionsScreen() {
-  const router = useRouter();
   const { conditions, isLoading, error, fetchConditions, refresh } = useConditionsStore();
 
   useEffect(() => {
     getUserLocation().then(fetchConditions);
   }, []);
-
-  const handleGenerateReport = () => {
-    router.push(ROUTES.WIZARD.STEP_1 as any);
-  };
 
   const locationLabel = conditions?.location?.label || DEFAULT_LOCATION.label;
   const stationId = conditions?.tides?.station || DEFAULT_LOCATION.noaaStation;
@@ -451,16 +448,8 @@ export default function ConditionsScreen() {
           </>
         )}
 
-        {/* ── CTA ────────────────────────────────── */}
-        <TouchableOpacity style={s.cta} onPress={handleGenerateReport} activeOpacity={0.8}>
-          <View style={s.ctaInner}>
-            <Text style={s.ctaLabel}>GENERATE REPORT</Text>
-            <Text style={s.ctaArrow}>→</Text>
-          </View>
-        </TouchableOpacity>
-
         {/* Bottom padding */}
-        <View style={{ height: 20 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -477,28 +466,28 @@ const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospa
 const s = StyleSheet.create({
   safe:       { flex: 1, backgroundColor: '#060E1A' },
   scroll:     { flex: 1 },
-  content:    { padding: 16, paddingBottom: 40 },
+  content:    { padding: 12, paddingBottom: 24 },
 
   // ── Header ──────────────────────────
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   brandMark: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: COLORS.seafoam,
-    letterSpacing: 6,
+    letterSpacing: 5,
     fontFamily: MONO,
   },
   brandSub: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '600',
     color: COLORS.textMuted,
-    letterSpacing: 4,
-    marginTop: -4,
+    letterSpacing: 3,
+    marginTop: -3,
     fontFamily: MONO,
   },
   headerRight: { alignItems: 'flex-end' },
@@ -525,7 +514,7 @@ const s = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.seafoam,
     opacity: 0.3,
-    marginVertical: 10,
+    marginVertical: 6,
   },
 
   // ── Loading / Error ──────────────────
@@ -571,28 +560,28 @@ const s = StyleSheet.create({
   primaryCell: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   primaryValue: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     color: COLORS.white,
     fontFamily: MONO,
   },
   primaryUnit: {
-    fontSize: 9,
+    fontSize: 8,
     color: COLORS.textMuted,
     fontFamily: MONO,
     letterSpacing: 1.5,
-    marginTop: 2,
+    marginTop: 1,
   },
   conditionsLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: COLORS.textMuted,
     fontFamily: MONO,
     letterSpacing: 2,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
   // ── Panel (reusable container) ───────
@@ -600,8 +589,8 @@ const s = StyleSheet.create({
     backgroundColor: PANEL_BG,
     borderWidth: 1,
     borderColor: GRID_LINE,
-    padding: 14,
-    marginBottom: 12,
+    padding: 10,
+    marginBottom: 8,
   },
 
   // ── Tide ─────────────────────────────
@@ -609,10 +598,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   tideMainValue: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: COLORS.white,
     fontFamily: MONO,
@@ -648,19 +637,19 @@ const s = StyleSheet.create({
   solunarHeadRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 14,
+    marginBottom: 8,
+    gap: 10,
   },
   solunarRatingBadge: {
-    width: 52,
-    height: 52,
+    width: 42,
+    height: 42,
     borderWidth: 2,
-    borderRadius: 4,
+    borderRadius: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   solunarRatingNum: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     fontFamily: MONO,
   },
@@ -678,32 +667,6 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
 
-  // ── CTA ──────────────────────────────
-  cta: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: COLORS.seafoam,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginTop: 8,
-  },
-  ctaInner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ctaLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.seafoam,
-    fontFamily: MONO,
-    letterSpacing: 3,
-  },
-  ctaArrow: {
-    fontSize: 20,
-    color: COLORS.seafoam,
-    fontFamily: MONO,
-  },
 });
 
 // ── Sub-component styles ──────────────────────────
@@ -866,6 +829,14 @@ const sg = StyleSheet.create({
   },
 
   // Forecast strip
+  forecastHeading: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
   forecastContainer: {
     flexDirection: 'row',
     backgroundColor: PANEL_BG,

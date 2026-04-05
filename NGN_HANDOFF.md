@@ -57,10 +57,11 @@ ngn-fishing-app/
 └── app/
     ├── _layout.tsx         ← Root stack navigator
     ├── tabs/
-    │   ├── _layout.tsx     ← Tab navigator (Conditions, Reports, Spots, Profile)
+    │   ├── _layout.tsx     ← Hamburger drawer + tab navigator (tab bar hidden)
     │   ├── index.tsx       ← Home screen — conditions dashboard
     │   ├── reports.tsx     ← Report history
-    │   ├── spots.tsx       ← Saved spots (placeholder)
+    │   ├── spots.tsx       ← GPS spot map with relief shading
+    │   ├── catches.tsx     ← Photo sharing with NGN branding + social share
     │   └── profile.tsx     ← Subscription + boat settings
     ├── wizard/
     │   ├── _layout.tsx
@@ -99,6 +100,9 @@ ngn-fishing-backend/
 - ✅ Relief shading — ESRI Ocean basemap + NOAA nautical chart tile overlays
 - ✅ Truncated JSON repair in report parser (handles mid-response cutoffs)
 - ✅ Backend forecast proxy endpoint (`/api/forecast`)
+- ✅ Hamburger drawer menu (replaced bottom tab bar) with animated slide-out nav
+- ✅ Compacted homescreen layout — same data, tighter spacing
+- ✅ Catches photo sharing screen — camera + gallery, NGN watermark, social share with branding
 
 ## What's Not Built Yet
 - ⬜ Login/signup screen (Supabase Auth — dependency installed, not wired)
