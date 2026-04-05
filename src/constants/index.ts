@@ -95,15 +95,15 @@ Never hallucinate GPS coordinates — use real, known fishing locations only.`,
 
 // ── Stripe Product IDs ───────────────────────
 // IMPORTANT: Replace these with real Stripe price IDs from your dashboard.
-// Stripe Dashboard → Products → NGN Fishing → copy the price_xxx IDs
+// Stripe Dashboard → Products → NGN Pro → copy the price_xxx IDs
 export const STRIPE_PRODUCTS = {
-  MONTHLY_PRICE_ID: 'price_REPLACE_MONTHLY',   // $4.99/mo — replace with real price ID
-  ANNUAL_PRICE_ID:  'price_REPLACE_ANNUAL',    // $29.99/yr — replace with real price ID
+  MONTHLY_PRICE_ID: 'price_REPLACE_MONTHLY',   // $9.99/mo — replace with real price ID
+  ANNUAL_PRICE_ID:  'price_REPLACE_ANNUAL',    // $59.99/yr — replace with real price ID
 } as const;
 
 export const PRICING = {
-  MONTHLY:      4.99,
-  ANNUAL:       29.99,
+  MONTHLY:      9.99,
+  ANNUAL:       59.99,
   ANNUAL_LABEL: 'Save 50%',
 } as const;
 
