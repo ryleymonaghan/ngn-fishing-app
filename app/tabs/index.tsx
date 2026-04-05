@@ -1,13 +1,14 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
-import { COLORS, DEFAULT_LOCATION } from '@constants/index';
-import { useConditionsStore } from '@stores/index';
-import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast } from '@app-types/index';
+import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES } from '@constants/index';
+import { useConditionsStore, useReportStore, useWizardStore } from '@stores/index';
+import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
 
 // ── Location helper ──────────────────────────────
 async function getUserLocation(): Promise<UserLocation> {
@@ -290,11 +291,42 @@ function ForecastStrip({ forecast }: { forecast: DayForecast[] }) {
   );
 }
 
+// ── Guide Me Now — smart species picker ─────────
+function getRecommendedSpecies(month: number, windSpeed: number): string[] {
+  const picks: string[] = [];
+  // Inshore picks by season
+  if (month >= 3 && month <= 5) {
+    picks.push('sheepshead', 'redfish', 'cobia', 'flounder');
+  } else if (month >= 6 && month <= 8) {
+    picks.push('redfish', 'flounder', 'spanish_mackerel', 'king_mackerel');
+  } else if (month >= 9 && month <= 11) {
+    picks.push('flounder', 'redfish', 'speckled_trout', 'black_drum');
+  } else {
+    picks.push('speckled_trout', 'sheepshead', 'redfish', 'black_drum');
+  }
+  // Calm wind = tarpon opportunity (spring-fall)
+  if (windSpeed < 8 && month >= 4 && month <= 10 && !picks.includes('tarpon')) {
+    picks.push('tarpon');
+  }
+  return picks.slice(0, 4);
+}
+
+function getCurrentTimeWindow(): 'morning' | 'midday' | 'afternoon' | 'evening' {
+  const h = new Date().getHours();
+  if (h < 11) return 'morning';
+  if (h < 14) return 'midday';
+  if (h < 18) return 'afternoon';
+  return 'evening';
+}
+
 // ═══════════════════════════════════════════════════
 // MAIN SCREEN
 // ═══════════════════════════════════════════════════
 export default function ConditionsScreen() {
   const { conditions, isLoading, error, fetchConditions, refresh } = useConditionsStore();
+  const { generateReport, isGenerating } = useReportStore();
+  const router = useRouter();
+  const [guideLoading, setGuideLoading] = useState(false);
 
   useEffect(() => {
     getUserLocation().then(fetchConditions);
@@ -302,6 +334,33 @@ export default function ConditionsScreen() {
 
   const locationLabel = conditions?.location?.label || DEFAULT_LOCATION.label;
   const stationId = conditions?.tides?.station || DEFAULT_LOCATION.noaaStation;
+
+  const handleGuideMe = async () => {
+    if (!conditions || guideLoading) return;
+    setGuideLoading(true);
+    try {
+      const month = new Date().getMonth() + 1;
+      const wind = conditions.weather?.windSpeed ?? 10;
+      const species = getRecommendedSpecies(month, wind);
+      const draft: WizardDraft = {
+        date:         new Date().toISOString().slice(0, 10),
+        timeWindow:   getCurrentTimeWindow(),
+        accessType:   'boat',
+        boatLengthFt: 24,
+        boatSpeedMph: 25,
+        species,
+        isOffshore:   false,
+        baitType:     'live',
+        baitIds:      ['live_shrimp', 'finger_mullet'],
+      };
+      await generateReport(draft, conditions);
+      router.push('/report/latest' as any);
+    } catch (err) {
+      // Report store sets error
+    } finally {
+      setGuideLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -327,6 +386,20 @@ export default function ConditionsScreen() {
 
         {/* Thin scanline accent */}
         <View style={s.scanline} />
+
+        {/* ── GUIDE ME NOW — one-tap AI report ── */}
+        {conditions && !guideLoading && (
+          <TouchableOpacity style={s.guideMeBtn} onPress={handleGuideMe} activeOpacity={0.85}>
+            <Text style={s.guideMeText}>GUIDE ME NOW</Text>
+            <Text style={s.guideMeSub}>One-tap AI report based on current conditions</Text>
+          </TouchableOpacity>
+        )}
+        {guideLoading && (
+          <View style={s.guideMeLoading}>
+            <ActivityIndicator size="small" color={COLORS.seafoam} />
+            <Text style={s.guideMeLoadingText}>GENERATING YOUR GUIDE...</Text>
+          </View>
+        )}
 
         {/* ── Loading ────────────────────────────── */}
         {isLoading && !conditions && (
@@ -582,6 +655,46 @@ const s = StyleSheet.create({
     letterSpacing: 2,
     textAlign: 'center',
     marginBottom: 8,
+  },
+
+  // ── Guide Me Now ──────────────────────
+  guideMeBtn: {
+    backgroundColor: COLORS.seafoam,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  guideMeText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 4,
+  },
+  guideMeSub: {
+    fontSize: 10,
+    color: '#060E1A',
+    opacity: 0.6,
+    marginTop: 3,
+    fontFamily: MONO,
+  },
+  guideMeLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    backgroundColor: '#081E36',
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    marginBottom: 12,
+    gap: 10,
+  },
+  guideMeLoadingText: {
+    fontSize: 11,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 2,
   },
 
   // ── Panel (reusable container) ───────
