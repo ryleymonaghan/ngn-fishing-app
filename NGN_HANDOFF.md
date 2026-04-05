@@ -114,6 +114,13 @@ ngn-fishing-backend/
 - ✅ **EAS Build config** — development/preview/production profiles in eas.json
 - ✅ **Store metadata** — full App Store + Google Play listing in store-metadata.json
 - ✅ **Supabase migration** — profiles, reports, saved_spots, trip_logs tables with RLS policies
+- ✅ **Expanded access types** — boat, kayak, shore, surf, dock with AI-tailored report prompts
+- ✅ **Bait delivery methods** — drone, kite, kayak ferry options for shore/surf
+- ✅ **Pin & Scout** — long-press map to drop pin, AI analyzes nearby underwater structure
+- ✅ **Knot Tying Guide** — 14 knots, step-by-step with pausable progress, category filters
+- ✅ **Rig Assembly Guide** — 11 rigs, step-by-step with components list + knot deep-links
+- ✅ **Gear Shop** — affiliate commerce with Bass Pro, Sportsman's, Amazon, contextual product recs
+- ✅ **Cast Plot (Rig Tracker)** — accelerometer + gyroscope cast detection, estimates rig landing position on map. Software-only, no hardware. Tackle weight adjustment, cast history, ±15-35 yard accuracy.
 
 ## What's Not Built Yet / Needs Finishing
 - ⬜ Replace placeholder Stripe price IDs in `src/constants/index.ts` (currently placeholders)
@@ -198,6 +205,15 @@ ngn-fishing-backend/
 | `eas.json` | EAS Build config — development/preview/production profiles |
 | `store-metadata.json` | Full App Store + Google Play listing metadata, screenshot requirements |
 | `supabase-migration.sql` | Database schema — profiles, reports, saved_spots, trip_logs tables + RLS policies (already run in Supabase) |
+| `src/services/scoutService.ts` | AI-powered structure analysis — Pin & Scout feature |
+| `src/services/castTrackerService.ts` | Cast detection via accelerometer + gyroscope, estimates rig position on map |
+| `src/constants/knots.ts` | 14 fishing knots database with step-by-step instructions |
+| `src/constants/rigs.ts` | 11 fishing rigs database with components, steps, and knot deep-links |
+| `src/constants/shop.ts` | Affiliate commerce — partners, categories, products, helper functions |
+| `src/constants/castTracker.ts` | Cast tracker configuration — sensor thresholds, distance model, tackle weights |
+| `app/tabs/knots.tsx` | Knot tying guide screen — filterable, step-by-step, pausable |
+| `app/tabs/rigs.tsx` | Rig assembly guide screen — step-by-step with knot deep-links |
+| `app/tabs/shop.tsx` | Gear shop screen — affiliate commerce with category filters |
 
 ## Modified Files This Session
 
@@ -208,6 +224,12 @@ ngn-fishing-backend/
 | `app/report/[id].tsx` | Added GPX chartplotter export, "SEND TO CHARTPLOTTER" button, notification scheduling on "GOIN' FISHIN'" |
 | `app/wizard/step2.tsx` | Added missing styles for AI recommend + custom species input |
 | `src/stores/index.ts` | Wired cloud sync — saveReportToCloud after generation, syncUserProfile on sign-in |
+| `app/tabs/spots.tsx` | Added Cast Plot feature — cast tracking toggle, tackle weight selector, rig position markers, cast info card |
+| `app/tabs/_layout.tsx` | Added knots, rigs, shop to hamburger drawer menu |
+| `src/constants/index.ts` | Added access types, bait delivery methods, APP_SLOGAN |
+| `src/types/index.ts` | Added baitDeliveryMethod to WizardDraft |
+| `app/wizard/step1.tsx` | Card layout for access types, conditional bait delivery UI |
+| `src/services/reportService.ts` | Access-type-aware prompts (shore, kayak, drone, kite context) |
 
 ---
 

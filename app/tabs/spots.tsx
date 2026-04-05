@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Linking, Platform, ScrollView, Alert,
   ActivityIndicator,
@@ -9,6 +9,16 @@ import { COLORS, DEFAULT_LOCATION } from '@constants/index';
 import { useReportStore, useAuthStore, useConditionsStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
 import { scoutNearbyStructure, type ScoutResult } from '@services/scoutService';
+import {
+  isCastTrackerAvailable,
+  startCastTracking,
+  stopCastTracking,
+  updateAnglerPosition,
+  setTackleWeight,
+  bearingToCardinal,
+  isCastStale,
+} from '@services/castTrackerService';
+import { TACKLE_WEIGHTS, type CastEstimate } from '@constants/castTracker';
 import type { FishingSpot } from '@app-types/index';
 
 // react-native-maps doesn't support web — conditional import
@@ -64,6 +74,14 @@ export default function SpotsScreen() {
   const [scoutResults, setScoutResults] = useState<ScoutResult[] | null>(null);
   const [scouting, setScouting] = useState(false);
   const [selectedScout, setSelectedScout] = useState<ScoutResult | null>(null);
+
+  // ── Cast Tracker state ─────────────────
+  const [castTracking, setCastTracking] = useState(false);
+  const [activeCast, setActiveCast] = useState<CastEstimate | null>(null);
+  const [castHistory, setCastHistory] = useState<CastEstimate[]>([]);
+  const [selectedTackle, setSelectedTackle] = useState('medium');
+  const [showTackleSelect, setShowTackleSelect] = useState(false);
+  const castAvailable = isCastTrackerAvailable();
 
   const isPro = user?.subscription?.isActive ?? false;
 
@@ -148,6 +166,66 @@ export default function SpotsScreen() {
     setDroppedPin(null);
     setScoutResults(null);
     setSelectedScout(null);
+  }, []);
+
+  // ── Cast Tracker controls ──────────────
+  const handleCastDetected = useCallback((cast: CastEstimate) => {
+    setActiveCast(cast);
+    setCastHistory((prev) => [cast, ...prev].slice(0, 20)); // keep last 20
+    // Animate map to show both angler and rig position
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: (cast.userLat + cast.estimatedLat) / 2,
+        longitude: (cast.userLng + cast.estimatedLng) / 2,
+        latitudeDelta: Math.max(0.005, Math.abs(cast.userLat - cast.estimatedLat) * 3),
+        longitudeDelta: Math.max(0.005, Math.abs(cast.userLng - cast.estimatedLng) * 3),
+      }, 400);
+    }
+  }, []);
+
+  const toggleCastTracking = useCallback(async () => {
+    if (castTracking) {
+      stopCastTracking();
+      setCastTracking(false);
+    } else {
+      const ok = await startCastTracking(handleCastDetected, selectedTackle);
+      if (ok) {
+        setCastTracking(true);
+      } else {
+        Alert.alert(
+          'Sensors Unavailable',
+          'Cast tracking requires accelerometer and gyroscope sensors. This feature is available on iOS and Android devices.',
+        );
+      }
+    }
+  }, [castTracking, handleCastDetected, selectedTackle]);
+
+  const handleTackleChange = useCallback((tackleId: string) => {
+    setSelectedTackle(tackleId);
+    setTackleWeight(tackleId);
+    setShowTackleSelect(false);
+  }, []);
+
+  const clearCastHistory = useCallback(() => {
+    setActiveCast(null);
+    setCastHistory([]);
+  }, []);
+
+  // Keep angler position updated for the cast tracker
+  useEffect(() => {
+    if (!castTracking) return;
+    // Use conditions location as baseline, update from map if available
+    const loc = conditions?.location;
+    if (loc) {
+      updateAnglerPosition(loc.lat, loc.lng);
+    }
+  }, [castTracking, conditions?.location]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCastTracking();
+    };
   }, []);
 
   // ── Web fallback (no react-native-maps on web) ────
@@ -312,6 +390,28 @@ export default function SpotsScreen() {
             onPress={() => { setSelectedScout(sr); setSelectedSpot(null); }}
           />
         ))}
+
+        {/* Cast tracker — active rig position marker */}
+        {activeCast && Marker && (
+          <Marker
+            coordinate={{ latitude: activeCast.estimatedLat, longitude: activeCast.estimatedLng }}
+            title={`RIG — ${activeCast.estimatedDistanceYds} yds ${bearingToCardinal(activeCast.estimatedBearing)}`}
+            description={`±${activeCast.accuracyRadiusYds} yds accuracy`}
+            pinColor="#FF6B35"
+            onPress={() => setSelectedSpot(null)}
+          />
+        )}
+
+        {/* Cast history markers (dimmed) */}
+        {castHistory.slice(1).map((c) => Marker && (
+          <Marker
+            key={c.id}
+            coordinate={{ latitude: c.estimatedLat, longitude: c.estimatedLng }}
+            title={`Previous — ${c.estimatedDistanceYds} yds`}
+            pinColor="#FF6B3566"
+            opacity={0.4}
+          />
+        ))}
       </MapView>
 
       {/* ── Layer Control Panel Toggle ─────────── */}
@@ -373,6 +473,111 @@ export default function SpotsScreen() {
               <Text style={s.layerUpgradeText}>UNLOCK ALL LAYERS — $9.99/MO</Text>
             </TouchableOpacity>
           )}
+        </View>
+      )}
+
+      {/* ── Cast Tracker Toggle Button ─────── */}
+      {castAvailable && (
+        <TouchableOpacity
+          style={[s.castToggleBtn, castTracking && s.castToggleBtnActive]}
+          onPress={toggleCastTracking}
+          activeOpacity={0.8}
+        >
+          <Text style={s.castToggleIcon}>🎯</Text>
+          <Text style={[s.castToggleText, castTracking && s.castToggleTextActive]}>
+            {castTracking ? 'TRACKING' : 'CAST PLOT'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* ── Cast Tracker Tackle Weight Selector ── */}
+      {castTracking && (
+        <TouchableOpacity
+          style={s.tackleBtn}
+          onPress={() => setShowTackleSelect((p) => !p)}
+          activeOpacity={0.8}
+        >
+          <Text style={s.tackleBtnText}>
+            ⚖ {TACKLE_WEIGHTS.find((t) => t.id === selectedTackle)?.label ?? 'Medium'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Tackle weight picker dropdown */}
+      {showTackleSelect && (
+        <View style={s.tacklePanel}>
+          <Text style={s.tacklePanelTitle}>TACKLE WEIGHT</Text>
+          <Text style={s.tacklePanelSub}>Affects distance estimation</Text>
+          {TACKLE_WEIGHTS.map((tw) => (
+            <TouchableOpacity
+              key={tw.id}
+              style={[s.tackleRow, tw.id === selectedTackle && s.tackleRowActive]}
+              onPress={() => handleTackleChange(tw.id)}
+              activeOpacity={0.75}
+            >
+              <View style={s.tackleRowInfo}>
+                <Text style={[s.tackleRowLabel, tw.id === selectedTackle && s.tackleRowLabelActive]}>
+                  {tw.label}
+                </Text>
+                <Text style={s.tackleRowDesc}>{tw.description}</Text>
+              </View>
+              {tw.id === selectedTackle && (
+                <Text style={s.tackleCheck}>✓</Text>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* ── Active Cast Info Card ────────────── */}
+      {activeCast && !selectedSpot && !selectedScout && (
+        <View style={s.castCard}>
+          <View style={s.castCardHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.castCardTitle}>🎯 RIG POSITION (ESTIMATED)</Text>
+              <Text style={s.castCardDisclaimer}>±{activeCast.accuracyRadiusYds} yds accuracy</Text>
+            </View>
+            <TouchableOpacity onPress={clearCastHistory}>
+              <Text style={s.spotDetailClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.castCardStats}>
+            <View style={s.castStat}>
+              <Text style={s.castStatValue}>{activeCast.estimatedDistanceYds}</Text>
+              <Text style={s.castStatLabel}>YARDS</Text>
+            </View>
+            <View style={s.castStat}>
+              <Text style={s.castStatValue}>{bearingToCardinal(activeCast.estimatedBearing)}</Text>
+              <Text style={s.castStatLabel}>BEARING</Text>
+            </View>
+            <View style={s.castStat}>
+              <Text style={s.castStatValue}>{activeCast.estimatedBearing}°</Text>
+              <Text style={s.castStatLabel}>HEADING</Text>
+            </View>
+            <View style={s.castStat}>
+              <Text style={s.castStatValue}>{Math.round(activeCast.peakAcceleration)}</Text>
+              <Text style={s.castStatLabel}>FORCE</Text>
+            </View>
+          </View>
+
+          <Text style={s.castCardCoords}>
+            Est. position: {activeCast.estimatedLat.toFixed(5)}, {activeCast.estimatedLng.toFixed(5)}
+          </Text>
+
+          {castHistory.length > 1 && (
+            <Text style={s.castHistoryCount}>
+              {castHistory.length} casts tracked this session
+            </Text>
+          )}
+
+          <TouchableOpacity
+            style={s.castNavBtn}
+            onPress={() => openNavigation(activeCast.estimatedLat, activeCast.estimatedLng, 'Rig Position')}
+            activeOpacity={0.85}
+          >
+            <Text style={s.spotDetailNavText}>NAVIGATE TO RIG →</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -1025,5 +1230,185 @@ const s = StyleSheet.create({
     marginBottom: 10,
     lineHeight: 16,
     fontStyle: 'italic',
+  },
+
+  // ── Cast Tracker styles ───────────
+  castToggleBtn: {
+    position: 'absolute',
+    top: 100,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    gap: 5,
+  },
+  castToggleBtnActive: {
+    borderColor: '#FF6B35',
+    backgroundColor: '#FF6B3518',
+  },
+  castToggleIcon: {
+    fontSize: 12,
+  },
+  castToggleText: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  castToggleTextActive: {
+    color: '#FF6B35',
+  },
+  tackleBtn: {
+    position: 'absolute',
+    top: 135,
+    left: 12,
+    backgroundColor: PANEL_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FF6B3544',
+  },
+  tackleBtnText: {
+    fontSize: 9,
+    color: '#FF6B35',
+    fontFamily: MONO,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  tacklePanel: {
+    position: 'absolute',
+    top: 160,
+    left: 12,
+    width: 220,
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: '#FF6B3544',
+    padding: 12,
+  },
+  tacklePanelTitle: {
+    fontSize: 10,
+    color: '#FF6B35',
+    fontFamily: MONO,
+    letterSpacing: 2,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  tacklePanelSub: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    marginBottom: 10,
+  },
+  tackleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 3,
+  },
+  tackleRowActive: {
+    borderColor: '#FF6B3544',
+    backgroundColor: '#FF6B350A',
+  },
+  tackleRowInfo: { flex: 1 },
+  tackleRowLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+  },
+  tackleRowLabelActive: {
+    color: '#FF6B35',
+  },
+  tackleRowDesc: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  tackleCheck: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FF6B35',
+    marginLeft: 8,
+  },
+
+  // ── Cast Info Card ────────────────
+  castCard: {
+    position: 'absolute',
+    bottom: 24,
+    left: 12,
+    right: 12,
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+    padding: 14,
+  },
+  castCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  castCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FF6B35',
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+  },
+  castCardDisclaimer: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 2,
+  },
+  castCardStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: GRID_LINE,
+  },
+  castStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  castStatValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.white,
+    fontFamily: MONO,
+  },
+  castStatLabel: {
+    fontSize: 8,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  castCardCoords: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginBottom: 6,
+  },
+  castHistoryCount: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+    marginBottom: 10,
+  },
+  castNavBtn: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 10,
+    alignItems: 'center',
   },
 });
