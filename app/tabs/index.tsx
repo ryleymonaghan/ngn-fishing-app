@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN } from '@constants/index';
 import { useConditionsStore, useReportStore, useWizardStore, useAuthStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
-import { generateForecastBriefing, type ForecastBriefing, type ForecastDay } from '@services/forecastBriefingService';
+import { generateForecastBriefing, type ForecastBriefing, type ForecastDay, type LightStatus } from '@services/forecastBriefingService';
 
 // ── Location helper ──────────────────────────────
 async function getUserLocation(): Promise<UserLocation> {
@@ -405,12 +405,8 @@ export default function ConditionsScreen() {
         {/* ── 72-HOUR FORECAST BUTTON ── */}
         {conditions && conditions.forecast && conditions.forecast.length > 0 && (
           <TouchableOpacity style={s.forecastBtn} onPress={handleForecastPress} activeOpacity={0.85}>
-            <Text style={s.forecastBtnIcon}>⚡</Text>
-            <View style={s.forecastBtnInfo}>
-              <Text style={s.forecastBtnText}>72-HOUR FORECAST</Text>
-              <Text style={s.forecastBtnSub}>Go/No-Go • Targets • Tides • Best Windows</Text>
-            </View>
-            <Text style={s.forecastBtnArrow}>›</Text>
+            <Text style={s.forecastBtnText}>QUICK FISHING FORECAST</Text>
+            <Text style={s.forecastBtnSub}>72-Hr Go/No-Go • What to Target • Best Windows</Text>
           </TouchableOpacity>
         )}
 
@@ -444,30 +440,34 @@ export default function ConditionsScreen() {
               <ScrollView style={s.modalScroll} showsVerticalScrollIndicator={false}>
                 {briefing?.days.map((day, i) => {
                   const isBest = i === briefing.bestDay;
-                  const statusColor = day.goNoGo.status === 'go' ? COLORS.success
-                    : day.goNoGo.status === 'marginal' ? COLORS.warning
+                  const light = day.assessment.light;
+                  const lightColor = light === 'green' ? COLORS.success
+                    : light === 'yellow' ? COLORS.warning
                     : COLORS.danger;
-                  const statusLabel = day.goNoGo.status === 'go' ? 'GO'
-                    : day.goNoGo.status === 'marginal' ? 'MARGINAL'
-                    : 'NO GO';
+                  const lightLabel = light === 'green' ? 'GREEN LIGHT'
+                    : light === 'yellow' ? 'YELLOW LIGHT'
+                    : 'RED LIGHT';
+                  const lightIcon = light === 'green' ? '🟢'
+                    : light === 'yellow' ? '🟡'
+                    : '🔴';
 
                   return (
-                    <View key={day.date} style={[s.fDay, isBest && s.fDayBest]}>
+                    <View key={day.date} style={[s.fDay, isBest && s.fDayBest, { borderLeftWidth: 4, borderLeftColor: lightColor }]}>
                       {/* Day header row */}
                       <View style={s.fDayHeader}>
                         <View style={s.fDayLabelWrap}>
                           <Text style={s.fDayLabel}>{day.dayLabel.toUpperCase()}</Text>
-                          {isBest && <Text style={s.fBestBadge}>★ BEST</Text>}
+                          {isBest && <Text style={s.fBestBadge}>★ BEST DAY</Text>}
                         </View>
-                        <View style={[s.fStatusBadge, { backgroundColor: statusColor }]}>
-                          <Text style={s.fStatusText}>{statusLabel}</Text>
+                        <View style={[s.fStatusBadge, { backgroundColor: lightColor }]}>
+                          <Text style={s.fStatusText}>{lightIcon} {lightLabel}</Text>
                         </View>
                       </View>
 
                       {/* Success + conditions row */}
                       <View style={s.fStatsRow}>
                         <View style={s.fStatBlock}>
-                          <Text style={[s.fStatBig, { color: statusColor }]}>{day.successPct}%</Text>
+                          <Text style={[s.fStatBig, { color: lightColor }]}>{day.successPct}%</Text>
                           <Text style={s.fStatSub}>SUCCESS</Text>
                         </View>
                         <View style={s.fStatBlock}>
@@ -503,17 +503,12 @@ export default function ConditionsScreen() {
                         ))}
                       </View>
 
-                      {/* Go/No-Go reasons */}
-                      {day.goNoGo.reasons.map((r, ri) => (
-                        <Text key={ri} style={s.fReason}>
-                          {day.goNoGo.status === 'go' ? '✓' : day.goNoGo.status === 'marginal' ? '⚠' : '✕'} {r}
+                      {/* Assessment reasons */}
+                      {day.assessment.reasons.map((r, ri) => (
+                        <Text key={ri} style={[s.fReason, { color: r.startsWith('✓') || r.includes('calm') || r.includes('glass') || r.includes('comfortable') || r.includes('Light wind') || r.includes('peak feeding') ? COLORS.success : light === 'red' ? COLORS.danger : COLORS.textSecondary }]}>
+                          {light === 'green' ? '✓' : light === 'yellow' ? '⚠' : '✕'} {r}
                         </Text>
                       ))}
-
-                      {/* Rain */}
-                      {day.rainChance > 0 && (
-                        <Text style={s.fRain}>{day.rainChance}% chance of rain</Text>
-                      )}
                     </View>
                   );
                 })}
@@ -842,42 +837,31 @@ const s = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // ── 72-Hour Forecast Button ─────────
+  // ── Quick Fishing Forecast Button ───
   forecastBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PANEL_BG,
-    borderWidth: 1.5,
-    borderColor: COLORS.warning,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: COLORS.warning,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     marginBottom: 10,
   },
-  forecastBtnIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  forecastBtnInfo: {
-    flex: 1,
-  },
   forecastBtnText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
-    color: COLORS.warning,
+    color: '#060E1A',
     fontFamily: MONO,
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textAlign: 'center',
   },
   forecastBtnSub: {
     fontSize: 9,
-    color: COLORS.textMuted,
+    color: '#060E1A',
+    opacity: 0.6,
     fontFamily: MONO,
-    marginTop: 2,
+    marginTop: 4,
     letterSpacing: 0.5,
-  },
-  forecastBtnArrow: {
-    fontSize: 24,
-    color: COLORS.warning,
-    fontWeight: '300',
+    textAlign: 'center',
   },
 
   // ── Forecast Modal ──────────────────
