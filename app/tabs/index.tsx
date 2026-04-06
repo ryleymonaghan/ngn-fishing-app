@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl, Platform,
+  ActivityIndicator, StyleSheet, RefreshControl, Platform, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN } from '@constants/index';
-import { useConditionsStore, useReportStore, useWizardStore } from '@stores/index';
+import { useConditionsStore, useReportStore, useWizardStore, useAuthStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
+import { generateForecastBriefing, type ForecastBriefing, type ForecastDay } from '@services/forecastBriefingService';
 
 // ── Location helper ──────────────────────────────
 async function getUserLocation(): Promise<UserLocation> {
@@ -325,8 +326,19 @@ function getCurrentTimeWindow(): 'morning' | 'midday' | 'afternoon' | 'evening' 
 export default function ConditionsScreen() {
   const { conditions, isLoading, error, fetchConditions, refresh } = useConditionsStore();
   const { generateReport, isGenerating } = useReportStore();
+  const { user } = useAuthStore();
   const router = useRouter();
   const [guideLoading, setGuideLoading] = useState(false);
+  const [showForecast, setShowForecast] = useState(false);
+  const [briefing, setBriefing] = useState<ForecastBriefing | null>(null);
+
+  const handleForecastPress = () => {
+    if (!conditions) return;
+    const boatFt = user?.boatLengthFt ?? 24;
+    const result = generateForecastBriefing(conditions, boatFt);
+    setBriefing(result);
+    setShowForecast(true);
+  };
 
   useEffect(() => {
     getUserLocation().then(fetchConditions);
@@ -389,6 +401,127 @@ export default function ConditionsScreen() {
 
         {/* Thin scanline accent */}
         <View style={s.scanline} />
+
+        {/* ── 72-HOUR FORECAST BUTTON ── */}
+        {conditions && conditions.forecast && conditions.forecast.length > 0 && (
+          <TouchableOpacity style={s.forecastBtn} onPress={handleForecastPress} activeOpacity={0.85}>
+            <Text style={s.forecastBtnIcon}>⚡</Text>
+            <View style={s.forecastBtnInfo}>
+              <Text style={s.forecastBtnText}>72-HOUR FORECAST</Text>
+              <Text style={s.forecastBtnSub}>Go/No-Go • Targets • Tides • Best Windows</Text>
+            </View>
+            <Text style={s.forecastBtnArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ── Forecast Modal ── */}
+        <Modal
+          visible={showForecast}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowForecast(false)}
+        >
+          <View style={s.modalOverlay}>
+            <View style={s.modalContent}>
+              {/* Header */}
+              <View style={s.modalHeader}>
+                <View>
+                  <Text style={s.modalTitle}>72-HOUR FORECAST</Text>
+                  <Text style={s.modalLoc}>{briefing?.locationLabel ?? ''} • {briefing?.boatLengthFt ?? 24}' boat</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowForecast(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Text style={s.modalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Verdict */}
+              {briefing && (
+                <View style={s.verdictBar}>
+                  <Text style={s.verdictText}>{briefing.overallVerdict}</Text>
+                </View>
+              )}
+
+              <ScrollView style={s.modalScroll} showsVerticalScrollIndicator={false}>
+                {briefing?.days.map((day, i) => {
+                  const isBest = i === briefing.bestDay;
+                  const statusColor = day.goNoGo.status === 'go' ? COLORS.success
+                    : day.goNoGo.status === 'marginal' ? COLORS.warning
+                    : COLORS.danger;
+                  const statusLabel = day.goNoGo.status === 'go' ? 'GO'
+                    : day.goNoGo.status === 'marginal' ? 'MARGINAL'
+                    : 'NO GO';
+
+                  return (
+                    <View key={day.date} style={[s.fDay, isBest && s.fDayBest]}>
+                      {/* Day header row */}
+                      <View style={s.fDayHeader}>
+                        <View style={s.fDayLabelWrap}>
+                          <Text style={s.fDayLabel}>{day.dayLabel.toUpperCase()}</Text>
+                          {isBest && <Text style={s.fBestBadge}>★ BEST</Text>}
+                        </View>
+                        <View style={[s.fStatusBadge, { backgroundColor: statusColor }]}>
+                          <Text style={s.fStatusText}>{statusLabel}</Text>
+                        </View>
+                      </View>
+
+                      {/* Success + conditions row */}
+                      <View style={s.fStatsRow}>
+                        <View style={s.fStatBlock}>
+                          <Text style={[s.fStatBig, { color: statusColor }]}>{day.successPct}%</Text>
+                          <Text style={s.fStatSub}>SUCCESS</Text>
+                        </View>
+                        <View style={s.fStatBlock}>
+                          <Text style={s.fStatBig}>{day.tempHigh}°</Text>
+                          <Text style={s.fStatSub}>{day.tempLow}° LOW</Text>
+                        </View>
+                        <View style={s.fStatBlock}>
+                          <Text style={s.fStatBig}>{day.wind}</Text>
+                          <Text style={s.fStatSub}>MPH {day.windDir}</Text>
+                        </View>
+                        <View style={s.fStatBlock}>
+                          <Text style={s.fStatBig}>{day.solunarRating}</Text>
+                          <Text style={s.fStatSub}>SOLUNAR</Text>
+                        </View>
+                      </View>
+
+                      {/* Weather conditions */}
+                      <Text style={s.fConditions}>{day.conditions}</Text>
+
+                      {/* Tides */}
+                      <Text style={s.fTides}>{day.tideSummary}</Text>
+
+                      {/* Best window */}
+                      <Text style={s.fWindow}>Best bite: {day.bestWindow}</Text>
+
+                      {/* Targets */}
+                      <View style={s.fTargetRow}>
+                        <Text style={s.fTargetLabel}>TARGET:</Text>
+                        {day.topTargets.map((t) => (
+                          <View key={t} style={s.fTargetPill}>
+                            <Text style={s.fTargetPillText}>{t}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Go/No-Go reasons */}
+                      {day.goNoGo.reasons.map((r, ri) => (
+                        <Text key={ri} style={s.fReason}>
+                          {day.goNoGo.status === 'go' ? '✓' : day.goNoGo.status === 'marginal' ? '⚠' : '✕'} {r}
+                        </Text>
+                      ))}
+
+                      {/* Rain */}
+                      {day.rainChance > 0 && (
+                        <Text style={s.fRain}>{day.rainChance}% chance of rain</Text>
+                      )}
+                    </View>
+                  );
+                })}
+                <View style={{ height: 24 }} />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* ── GUIDE ME NOW — one-tap AI report ── */}
         {conditions && !guideLoading && (
@@ -707,6 +840,233 @@ const s = StyleSheet.create({
     color: COLORS.seafoam,
     fontFamily: MONO,
     letterSpacing: 2,
+  },
+
+  // ── 72-Hour Forecast Button ─────────
+  forecastBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    borderWidth: 1.5,
+    borderColor: COLORS.warning,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  forecastBtnIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  forecastBtnInfo: {
+    flex: 1,
+  },
+  forecastBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.warning,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  forecastBtnSub: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  forecastBtnArrow: {
+    fontSize: 24,
+    color: COLORS.warning,
+    fontWeight: '300',
+  },
+
+  // ── Forecast Modal ──────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#060E1A',
+    borderTopWidth: 2,
+    borderTopColor: COLORS.warning,
+    maxHeight: '92%',
+    paddingTop: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.warning,
+    fontFamily: MONO,
+    letterSpacing: 3,
+  },
+  modalLoc: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginTop: 3,
+  },
+  modalClose: {
+    fontSize: 22,
+    color: COLORS.textMuted,
+    paddingLeft: 12,
+  },
+  verdictBar: {
+    backgroundColor: `${COLORS.warning}15`,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: `${COLORS.warning}33`,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  verdictText: {
+    fontSize: 13,
+    color: COLORS.white,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  modalScroll: {
+    paddingHorizontal: 16,
+  },
+
+  // ── Forecast Day Card ───────────────
+  fDay: {
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    padding: 14,
+    marginBottom: 10,
+  },
+  fDayBest: {
+    borderColor: COLORS.success,
+    borderWidth: 1.5,
+  },
+  fDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  fDayLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fDayLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.white,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  fBestBadge: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.success,
+    fontFamily: MONO,
+    letterSpacing: 1,
+  },
+  fStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  fStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  fStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: GRID_LINE,
+  },
+  fStatBlock: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  fStatBig: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.white,
+    fontFamily: MONO,
+  },
+  fStatSub: {
+    fontSize: 7,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  fConditions: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+    marginBottom: 4,
+  },
+  fTides: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    marginBottom: 4,
+  },
+  fWindow: {
+    fontSize: 11,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  fTargetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  fTargetLabel: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  fTargetPill: {
+    backgroundColor: `${COLORS.seafoam}18`,
+    borderWidth: 1,
+    borderColor: `${COLORS.seafoam}44`,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  fTargetPillText: {
+    fontSize: 10,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    fontWeight: '600',
+  },
+  fReason: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
+    marginBottom: 2,
+  },
+  fRain: {
+    fontSize: 10,
+    color: COLORS.info,
+    fontFamily: MONO,
+    marginTop: 4,
   },
 
   // ── Panel (reusable container) ───────

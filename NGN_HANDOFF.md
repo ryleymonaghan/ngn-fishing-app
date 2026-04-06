@@ -122,6 +122,7 @@ ngn-fishing-backend/
 - ✅ **Gear Shop** — affiliate commerce with Bass Pro, Sportsman's, Amazon, contextual product recs
 - ✅ **Cast Plot (Rig Tracker)** — accelerometer + gyroscope cast detection, estimates rig landing position on map. Software-only, no hardware. Tackle weight adjustment, cast history, ±15-35 yard accuracy.
 - ✅ **Fishing Location Picker** — wizard step 1 now asks "Where are you fishing?" with 24 preset locations across SC, NC, GA, FL. Searchable, filterable by state. Auto-detects closest preset to phone GPS. Report uses selected location for AI prompt + re-fetches tide/weather data for that NOAA station if location differs from phone GPS by >7 miles.
+- ✅ **72-Hour Forecast Briefing** — button on home screen (front and center). Tap to open modal with personalized Go/No-Go for each day based on user's boat size, wind, waves, temp, solunar. Shows success %, target species, tide schedule, best bite windows, and reasons. Highlights best day with ★. No AI call — instant from local data.
 
 ## What's Not Built Yet / Needs Finishing
 - ⬜ Replace placeholder Stripe price IDs in `src/constants/index.ts` (currently placeholders)
