@@ -46,10 +46,11 @@ const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/service
 const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
 
 // ── WMS Tile URLs (bathymetry — from OpenTopography research) ──
+// WMSTile from react-native-maps replaces {minX},{minY},{maxX},{maxY},{width},{height}
 // GMRT: Multi-resolution ocean floor from multibeam sonar surveys (ledges, holes, drop-offs)
-const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:900913';
+const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:900913&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
 // GEBCO: Global bathymetric grid — shaded relief of ocean floor
-const GEBCO_WMS_URL = 'https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&layers=gebco_latest_2&styles=&format=image/png&transparent=false&srs=EPSG:900913';
+const GEBCO_WMS_URL = 'https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&layers=gebco_latest_2&styles=&format=image/png&transparent=false&srs=EPSG:900913&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
 
 // ── Layer definitions ────────────────────────────
 // anglerOnly = true → requires Pro Angler tier ($19.99/mo)
