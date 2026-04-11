@@ -29,6 +29,7 @@ export default function TabLayout() {
         },
       }}
     >
+      {/* ── 5 visible tabs ─────────────────── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -42,25 +43,8 @@ export default function TabLayout() {
         options={{
           title: 'SPOT MAP',
           headerShown: false,
-          tabBarLabel: 'SPOTS',
+          tabBarLabel: 'MAP',
           tabBarIcon: ({ color }) => <TabIcon icon="◎" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: 'REPORTS',
-          tabBarLabel: 'REPORTS',
-          tabBarIcon: ({ color }) => <TabIcon icon="◫" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: 'COMMUNITY',
-          headerShown: false,
-          tabBarLabel: 'CREW',
-          tabBarIcon: ({ color }) => <TabIcon icon="📡" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -68,7 +52,7 @@ export default function TabLayout() {
         options={{
           title: 'GEAR SHOP',
           tabBarLabel: 'SHOP',
-          tabBarIcon: ({ color }) => <TabIcon icon="🏷" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon icon="▣" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -76,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: 'GUIDES',
           tabBarLabel: 'GUIDES',
-          tabBarIcon: ({ color }) => <TabIcon icon="⚓" color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon icon="⊞" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -88,10 +72,12 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hidden tabs — accessible via navigation but not shown in tab bar */}
-      <Tabs.Screen name="triplog"  options={{ href: null, title: 'TRIP LOG' }} />
-      <Tabs.Screen name="catches"  options={{ href: null, title: 'CATCHES' }} />
-      <Tabs.Screen name="rigs"     options={{ href: null, title: 'RIG GUIDE' }} />
+      {/* ── Hidden tabs — accessible via navigation, not in tab bar ── */}
+      <Tabs.Screen name="reports"    options={{ href: null, title: 'REPORTS' }} />
+      <Tabs.Screen name="community"  options={{ href: null, title: 'COMMUNITY' }} />
+      <Tabs.Screen name="triplog"    options={{ href: null, title: 'TRIP LOG' }} />
+      <Tabs.Screen name="catches"    options={{ href: null, title: 'CATCHES' }} />
+      <Tabs.Screen name="rigs"       options={{ href: null, title: 'RIG GUIDE' }} />
     </Tabs>
   );
 }

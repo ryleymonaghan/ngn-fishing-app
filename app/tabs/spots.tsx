@@ -26,6 +26,7 @@ import { getWaypointInfo, sortSpotsByDistance, type WaypointInfo } from '@servic
 let MapView: any = null;
 let Marker: any = null;
 let UrlTile: any = null;
+let WMSTile: any = null;
 let Polyline: any = null;
 if (Platform.OS !== 'web') {
   try {
@@ -33,6 +34,7 @@ if (Platform.OS !== 'web') {
     MapView = Maps.default;
     Marker = Maps.Marker;
     UrlTile = Maps.UrlTile;
+    WMSTile = Maps.WMSTile;
     Polyline = Maps.Polyline;
   } catch {}
 }
@@ -41,8 +43,13 @@ if (Platform.OS !== 'web') {
 const NOAA_CHART_TILE_URL = 'https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png';
 const ESRI_OCEAN_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}';
-const NOAA_ENC_TILE_URL   = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/tile/{z}/{y}/{x}';
 const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
+
+// ── WMS Tile URLs (bathymetry — from OpenTopography research) ──
+// GMRT: Multi-resolution ocean floor from multibeam sonar surveys (ledges, holes, drop-offs)
+const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:900913';
+// GEBCO: Global bathymetric grid — shaded relief of ocean floor
+const GEBCO_WMS_URL = 'https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&layers=gebco_latest_2&styles=&format=image/png&transparent=false&srs=EPSG:900913';
 
 // ── Layer definitions ────────────────────────────
 // anglerOnly = true → requires Pro Angler tier ($19.99/mo)
@@ -56,12 +63,12 @@ interface MapLayer {
 }
 
 const MAP_LAYERS: MapLayer[] = [
-  { id: 'satellite',  label: 'Satellite',         shortLabel: 'SAT',    description: 'Standard satellite imagery',               anglerOnly: false },
-  { id: 'ocean',      label: 'Ocean Relief',       shortLabel: 'OCEAN',  description: 'ESRI bathymetric shading + depth colors',   anglerOnly: true  },
-  { id: 'depthchart', label: 'Depth Contours',     shortLabel: 'DEPTH',  description: 'NOAA ENC — depth soundings, contours, ledges', anglerOnly: true  },
-  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths', anglerOnly: true  },
-  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',       anglerOnly: true  },
-  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',  anglerOnly: true  },
+  { id: 'satellite',  label: 'Satellite',          shortLabel: 'SAT',    description: 'Standard satellite imagery',                        anglerOnly: false },
+  { id: 'ocean',      label: 'GEBCO Bathymetry',   shortLabel: 'OCEAN',  description: 'Global ocean floor — shaded relief from sonar data', anglerOnly: true  },
+  { id: 'depthchart', label: 'Seafloor Detail',    shortLabel: 'DEPTH',  description: 'GMRT multibeam sonar — ledges, holes, drop-offs',   anglerOnly: true  },
+  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths',   anglerOnly: true  },
+  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                anglerOnly: true  },
+  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',           anglerOnly: true  },
 ];
 
 type BaseMap = 'satellite' | 'ocean';
@@ -375,33 +382,25 @@ export default function SpotsScreen() {
         loadingIndicatorColor={COLORS.seafoam}
         loadingBackgroundColor={COLORS.navy}
       >
-        {/* ESRI Ocean Relief basemap — full quality for Pro Angler, preview for others */}
-        {baseMap === 'ocean' && UrlTile && (
-          <UrlTile
-            urlTemplate={ESRI_OCEAN_TILE_URL}
+        {/* GEBCO Global Bathymetry — ocean floor shaded relief from sonar data */}
+        {baseMap === 'ocean' && WMSTile && (
+          <WMSTile
+            urlTemplate={GEBCO_WMS_URL}
             maximumZ={isAnglerTier ? 13 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 1 : 0.6}
-            tileCachePath="esri_ocean"
-            tileCacheMaxAge={86400}
-            offlineMode={false}
             shouldReplaceMapContent={true}
-            flipY={false}
             zIndex={1}
           />
         )}
 
-        {/* NOAA ENC Depth Contours — depth soundings, contour lines, ledges */}
-        {showDepthChart && UrlTile && (
-          <UrlTile
-            urlTemplate={NOAA_ENC_TILE_URL}
+        {/* GMRT Multibeam Sonar — high-res seafloor detail (ledges, holes, drop-offs) */}
+        {showDepthChart && WMSTile && (
+          <WMSTile
+            urlTemplate={GMRT_WMS_URL}
             maximumZ={isAnglerTier ? 14 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.85 : 0.4}
-            tileCachePath="noaa_enc"
-            tileCacheMaxAge={86400}
-            offlineMode={false}
-            flipY={false}
             zIndex={2}
           />
         )}
