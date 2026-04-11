@@ -124,6 +124,26 @@ export default function SpotsScreen() {
     return spots;
   }, [latestReport]);
 
+  // ── Center map on real device GPS on mount ────
+  useEffect(() => {
+    (async () => {
+      try {
+        const Location = require('expo-location');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (mapRef.current?.animateToRegion) {
+          mapRef.current.animateToRegion({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            latitudeDelta: 0.15,
+            longitudeDelta: 0.15,
+          }, 800);
+        }
+      } catch {}
+    })();
+  }, []);
+
   const openNavigation = useCallback((lat: number, lng: number, name: string) => {
     if (Platform.OS === 'ios') {
       Linking.openURL(`maps://?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`).catch(() => {
@@ -647,21 +667,38 @@ export default function SpotsScreen() {
       {/* ── Drop Pin Button ─────────────────── */}
       <TouchableOpacity
         style={[s.dropPinBtn, droppedPin && s.dropPinBtnActive]}
-        onPress={() => {
+        onPress={async () => {
           if (droppedPin) {
             // Clear existing pin
             clearPin();
           } else {
-            // Drop pin at current map center (or user location)
-            const loc = conditions?.location;
-            if (loc) {
-              setDroppedPin({ lat: loc.lat, lng: loc.lng });
-              setScoutResults(null);
-              setSelectedScout(null);
-              setSelectedSpot(null);
-            } else {
-              Alert.alert('Location Required', 'Enable location services to drop a pin at your position.');
-            }
+            // Drop pin at map's current center (camera position)
+            try {
+              if (mapRef.current?.getCamera) {
+                const camera = await mapRef.current.getCamera();
+                if (camera?.center) {
+                  setDroppedPin({ lat: camera.center.latitude, lng: camera.center.longitude });
+                  setScoutResults(null);
+                  setSelectedScout(null);
+                  setSelectedSpot(null);
+                  return;
+                }
+              }
+            } catch {}
+            // Fallback: use device GPS via expo-location
+            try {
+              const Location = require('expo-location');
+              const { status } = await Location.requestForegroundPermissionsAsync();
+              if (status === 'granted') {
+                const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+                setDroppedPin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                setScoutResults(null);
+                setSelectedScout(null);
+                setSelectedSpot(null);
+                return;
+              }
+            } catch {}
+            Alert.alert('Location Required', 'Enable location services or pan the map to drop a pin.');
           }
         }}
         activeOpacity={0.8}

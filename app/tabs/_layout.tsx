@@ -78,8 +78,9 @@ export default function TabLayout() {
         <Tabs.Screen name="profile"    options={{ href: null, title: 'PROFILE' }} />
         <Tabs.Screen name="community"  options={{ href: null, title: 'COMMUNITY' }} />
         <Tabs.Screen name="triplog"    options={{ href: null, title: 'TRIP LOG' }} />
-        <Tabs.Screen name="catches"    options={{ href: null, title: 'CATCHES' }} />
-        <Tabs.Screen name="rigs"       options={{ href: null, title: 'RIG GUIDE' }} />
+        <Tabs.Screen name="catches"       options={{ href: null, title: 'CATCHES' }} />
+        <Tabs.Screen name="rigs"          options={{ href: null, title: 'RIG GUIDE' }} />
+        <Tabs.Screen name="notifications" options={{ href: null, title: 'NOTIFICATIONS' }} />
       </Tabs>
 
       {/* ── Hamburger Menu Modal ─────────────── */}
@@ -95,7 +96,7 @@ export default function TabLayout() {
 
             <MenuItem label="Account" icon="◇" onPress={() => navigateTo('/tabs/profile')} />
             <MenuItem label="Trip Logs" icon="▤" onPress={() => navigateTo('/tabs/triplog')} />
-            <MenuItem label="Notifications" icon="▣" onPress={() => navigateTo('/tabs/profile')} />
+            <MenuItem label="Notifications" icon="▣" onPress={() => navigateTo('/tabs/notifications')} />
             <MenuItem label="Crew Chat" icon="◈" onPress={() => navigateTo('/tabs/community')} />
 
             <View style={s.menuDivider} />

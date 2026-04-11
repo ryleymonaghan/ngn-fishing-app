@@ -410,23 +410,54 @@ export default function ConditionsScreen() {
         {/* Thin scanline accent */}
         <View style={s.scanline} />
 
-        {/* ── GENERATE NGN FISHING REPORT CTA ── */}
+        {/* ── Greeting + Question ── */}
+        <Text style={s.greeting}>
+          Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
+        </Text>
+        <Text style={s.questionText}>What are we doing today?</Text>
+
+        {/* ── Notification Banner ── */}
         <TouchableOpacity
-          style={s.generateCta}
-          onPress={() => router.push(ROUTES.WIZARD.STEP_1 as any)}
-          activeOpacity={0.85}
+          style={s.notifBanner}
+          activeOpacity={0.8}
+          onPress={() => router.push('/tabs/notifications' as any)}
         >
-          <Text style={s.generateCtaText}>GENERATE NGN FISHING REPORT</Text>
-          <Text style={s.generateCtaArrow}>→</Text>
+          <Text style={s.notifDot}>●</Text>
+          <Text style={s.notifText}>You have <Text style={s.notifCount}>0 notifications</Text></Text>
+          <Text style={s.notifArrow}>→</Text>
         </TouchableOpacity>
 
-        {/* ── 72-HOUR FORECAST BUTTON ── */}
-        {conditions && conditions.forecast && conditions.forecast.length > 0 && (
-          <TouchableOpacity style={s.forecastBtn} onPress={handleForecastPress} activeOpacity={0.85}>
-            <Text style={s.forecastBtnText}>QUICK FISHING FORECAST</Text>
-            <Text style={s.forecastBtnSub}>72-Hr Go/No-Go • What to Target • Best Windows</Text>
+        {/* ── Compact 3-Button Row ── */}
+        <View style={s.ctaRow}>
+          <TouchableOpacity
+            style={[s.ctaBtn, { backgroundColor: COLORS.seafoam }]}
+            onPress={() => router.push(ROUTES.WIZARD.STEP_1 as any)}
+            activeOpacity={0.85}
+          >
+            <Text style={s.ctaBtnIcon}>▶</Text>
+            <Text style={[s.ctaBtnLabel, { color: '#060E1A' }]}>REPORT</Text>
           </TouchableOpacity>
-        )}
+
+          <TouchableOpacity
+            style={[s.ctaBtn, { backgroundColor: '#F59E0B' }]}
+            onPress={handleForecastPress}
+            activeOpacity={0.85}
+          >
+            <Text style={s.ctaBtnIcon}>◉</Text>
+            <Text style={[s.ctaBtnLabel, { color: '#060E1A' }]}>FORECAST</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.ctaBtn, { backgroundColor: '#E63946' }]}
+            onPress={handleGuideMe}
+            activeOpacity={0.85}
+          >
+            <Text style={s.ctaBtnIcon}>◎</Text>
+            <Text style={[s.ctaBtnLabel, { color: '#FFF' }]}>GUIDE ME</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Forecast modal is triggered by the FORECAST CTA button above */}
 
         {/* ── Forecast Modal ── */}
         <Modal
@@ -536,13 +567,7 @@ export default function ConditionsScreen() {
           </View>
         </Modal>
 
-        {/* ── GUIDE ME NOW — one-tap AI report ── */}
-        {conditions && !guideLoading && (
-          <TouchableOpacity style={s.guideMeBtn} onPress={handleGuideMe} activeOpacity={0.85}>
-            <Text style={s.guideMeText}>GUIDE ME NOW</Text>
-            <Text style={s.guideMeSub}>One-tap AI report based on current conditions</Text>
-          </TouchableOpacity>
-        )}
+        {/* ── GUIDE ME loading indicator ── */}
         {guideLoading && (
           <View style={s.guideMeLoading}>
             <ActivityIndicator size="small" color={COLORS.seafoam} />
@@ -595,17 +620,46 @@ export default function ConditionsScreen() {
 
             <Text style={s.conditionsLabel}>{conditions.weather.conditions.toUpperCase()}</Text>
 
-            {/* ── 5-DAY SPECIES FORECAST ──────────── */}
+            {/* ── 3-DAY FORECAST with inshore/offshore split ── */}
             {forecasts.length > 0 && (
               <>
-                <SectionHeader title="5-DAY SPECIES FORECAST" />
+                <SectionHeader title="3-DAY FORECAST" />
                 <DaySelector
-                  forecasts={forecasts}
-                  selectedDay={selectedDay}
+                  forecasts={forecasts.slice(0, 3)}
+                  selectedDay={Math.min(selectedDay, 2)}
                   onSelect={setSelectedDay}
                 />
-                <DaySummaryCard day={forecasts[selectedDay]} />
-                {forecasts[selectedDay].categories.map(cat => (
+
+                {/* Inshore / Offshore success % */}
+                {(() => {
+                  const day = forecasts[Math.min(selectedDay, 2)];
+                  if (!day) return null;
+                  const inshore = day.categories.find(c => c.categoryId === 'inshore');
+                  const offshore = day.categories.find(c => c.categoryId === 'offshore_trolling' || c.categoryId === 'offshore_reef');
+                  const inshoreScore = inshore?.topScore ?? 0;
+                  const offshoreScore = offshore?.topScore ?? 0;
+                  return (
+                    <View style={s.successRow}>
+                      <View style={s.successCard}>
+                        <Text style={s.successLabel}>INSHORE</Text>
+                        <Text style={[s.successPct, { color: inshoreScore >= 50 ? COLORS.success : COLORS.warning }]}>
+                          {inshoreScore}%
+                        </Text>
+                        <Text style={s.successSub}>success</Text>
+                      </View>
+                      <View style={s.successCard}>
+                        <Text style={s.successLabel}>OFFSHORE</Text>
+                        <Text style={[s.successPct, { color: offshoreScore >= 50 ? COLORS.success : COLORS.warning }]}>
+                          {offshoreScore}%
+                        </Text>
+                        <Text style={s.successSub}>success</Text>
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                <DaySummaryCard day={forecasts[Math.min(selectedDay, 2)]} />
+                {forecasts[Math.min(selectedDay, 2)].categories.map(cat => (
                   <CategoryCard
                     key={cat.categoryId}
                     category={cat}
@@ -752,29 +806,102 @@ const s = StyleSheet.create({
     marginVertical: 6,
   },
 
-  // ── Generate Report CTA ────────────
-  generateCta: {
+  // ── Greeting + CTA Row ────────────
+  greeting: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.white,
+    marginTop: 14,
+    marginBottom: 2,
+  },
+  questionText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginBottom: 10,
+  },
+  notifBanner: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.seafoam,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginTop: 12,
+    backgroundColor: '#0D2B4A',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     marginBottom: 12,
   },
-  generateCtaText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#060E1A',
-    fontFamily: MONO,
-    letterSpacing: 2,
+  notifDot: {
+    fontSize: 10,
+    color: '#E63946',
+    marginRight: 8,
   },
-  generateCtaArrow: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#060E1A',
+  notifText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textSecondary,
     fontFamily: MONO,
+  },
+  notifCount: {
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+  notifArrow: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  ctaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  ctaBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  ctaBtnIcon: {
+    fontSize: 18,
+    color: '#060E1A',
+    marginBottom: 4,
+  },
+  ctaBtnLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+  },
+
+  // ── Inshore / Offshore success row ──
+  successRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  successCard: {
+    flex: 1,
+    backgroundColor: '#0D2B4A',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  successLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  successPct: {
+    fontSize: 26,
+    fontWeight: '800',
+    fontFamily: MONO,
+    fontVariant: ['tabular-nums'] as any,
+  },
+  successSub: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    marginTop: 2,
   },
 
   // ── Loading / Error ──────────────────
@@ -844,28 +971,7 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
 
-  // ── Guide Me Now ──────────────────────
-  guideMeBtn: {
-    backgroundColor: COLORS.seafoam,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  guideMeText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#060E1A',
-    fontFamily: MONO,
-    letterSpacing: 4,
-  },
-  guideMeSub: {
-    fontSize: 10,
-    color: '#060E1A',
-    opacity: 0.6,
-    marginTop: 3,
-    fontFamily: MONO,
-  },
+  // ── Guide Me Loading ──────────────────
   guideMeLoading: {
     flexDirection: 'row',
     alignItems: 'center',
