@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, Image,
   ActivityIndicator, StyleSheet, RefreshControl, Platform, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN } from '@constants/index';
+import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN, ROUTES } from '@constants/index';
 import { useConditionsStore, useReportStore, useWizardStore, useAuthStore, useForecastStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
 import { generateForecastBriefing, type ForecastBriefing, type ForecastDay, type LightStatus } from '@services/forecastBriefingService';
@@ -393,10 +393,11 @@ export default function ConditionsScreen() {
       >
         {/* ── Header Bar ─────────────────────────── */}
         <View style={s.headerBar}>
-          <View>
-            <Text style={s.brandMark}>NGN</Text>
-            <Text style={s.brandSub}>FISHING</Text>
-          </View>
+          <Image
+            source={require('../../assets/logo-source.png')}
+            style={s.headerLogo}
+            resizeMode="contain"
+          />
           <View style={s.headerRight}>
             <Text style={s.headerTime}>{fmtNow()}</Text>
             <Text style={s.headerLoc}>{locationLabel}</Text>
@@ -409,6 +410,16 @@ export default function ConditionsScreen() {
 
         {/* Thin scanline accent */}
         <View style={s.scanline} />
+
+        {/* ── GENERATE NGN FISHING REPORT CTA ── */}
+        <TouchableOpacity
+          style={s.generateCta}
+          onPress={() => router.push(ROUTES.WIZARD.STEP_1 as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={s.generateCtaText}>GENERATE NGN FISHING REPORT</Text>
+          <Text style={s.generateCtaArrow}>→</Text>
+        </TouchableOpacity>
 
         {/* ── 72-HOUR FORECAST BUTTON ── */}
         {conditions && conditions.forecast && conditions.forecast.length > 0 && (
@@ -680,8 +691,19 @@ export default function ConditionsScreen() {
           </>
         )}
 
+        {/* ── COMING SOON: BEACHCOMBER ── */}
+        <View style={s.comingSoonCard}>
+          <View style={s.comingSoonBadge}>
+            <Text style={s.comingSoonBadgeText}>COMING SOON</Text>
+          </View>
+          <Text style={s.comingSoonTitle}>Beachcomber</Text>
+          <Text style={s.comingSoonDesc}>
+            A guide to find fossilized shark teeth, sand dollars{'\n'}and other beach treasures.
+          </Text>
+        </View>
+
         {/* Bottom padding */}
-        <View style={{ height: 16 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -706,6 +728,10 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginBottom: 2,
+  },
+  headerLogo: {
+    width: 60,
+    height: 48,
   },
   brandMark: {
     fontSize: 24,
@@ -756,6 +782,67 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.seafoam,
     opacity: 0.3,
     marginVertical: 6,
+  },
+
+  // ── Generate Report CTA ────────────
+  generateCta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.seafoam,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  generateCtaText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  generateCtaArrow: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+  },
+
+  // ── Coming Soon: Beachcomber ────────
+  comingSoonCard: {
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#0D2B4A',
+    borderStyle: 'dashed',
+    padding: 16,
+    alignItems: 'center',
+  },
+  comingSoonBadge: {
+    backgroundColor: '#E74C3C',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 10,
+  },
+  comingSoonBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.white,
+    fontFamily: MONO,
+    marginBottom: 6,
+  },
+  comingSoonDesc: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 
   // ── Loading / Error ──────────────────

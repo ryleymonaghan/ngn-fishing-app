@@ -88,10 +88,10 @@ export default function LoginScreen() {
                 <Text style={s.tierName}>FREE</Text>
                 <Text style={s.tierPrice}>$0</Text>
               </View>
-              <Text style={s.tierDetail}>• {FREE_REPORT_LIMIT} AI fishing reports</Text>
-              <Text style={s.tierDetail}>• Live conditions dashboard</Text>
+              <Text style={s.tierDetail}>• Fishing forecast dashboard</Text>
+              <Text style={s.tierDetail}>• Live conditions + weather</Text>
               <Text style={s.tierDetail}>• Standard satellite map</Text>
-              <Text style={s.tierDetailMuted}>• No relief shading or GPS spots</Text>
+              <Text style={s.tierDetailMuted}>• Full AI reports — $9.99 each</Text>
             </View>
 
             {/* Pro Monthly */}
@@ -222,7 +222,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleSkip} style={s.skipBtn}>
-              <Text style={s.skipText}>Skip for now — try {FREE_REPORT_LIMIT} free reports →</Text>
+              <Text style={s.skipText}>Skip for now — try the free forecast →</Text>
             </TouchableOpacity>
           </View>
 

@@ -103,9 +103,10 @@ export const STRIPE_PRODUCTS = {
 } as const;
 
 export const PRICING = {
-  MONTHLY:      9.99,
-  ANNUAL:       59.99,
-  ANNUAL_LABEL: 'Save 50%',
+  SINGLE_REPORT: 9.99,
+  MONTHLY:       9.99,
+  ANNUAL:        59.99,
+  ANNUAL_LABEL:  'Save 50%',
 } as const;
 
 // ── Time Windows ─────────────────────────────

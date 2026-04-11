@@ -30,26 +30,27 @@ export default function WizardStep2() {
     updateDraft({ isOffshore: val, species: [] });
   };
 
-  const { canGenerateReport } = useAuthStore();
+  const { canGenerateReport, user } = useAuthStore();
 
   const handleGenerate = async () => {
     if (!conditions) return;
 
-    // Paywall check — free users get FREE_REPORT_LIMIT reports
-    if (!canGenerateReport()) {
+    // Paywall — free users must purchase per report or subscribe
+    const isPro = user?.subscription?.isActive ?? false;
+    if (!isPro) {
       Alert.alert(
-        'Upgrade to Pro',
-        `You've used all ${FREE_REPORT_LIMIT} free reports. Upgrade to NGN Pro for unlimited reports, relief shading, GPS spots, and more.`,
+        'Purchase Full Report',
+        `Free accounts include the fishing forecast. Full AI reports with GPS spots, species intel, and tactics are $${PRICING.SINGLE_REPORT} each — or subscribe for unlimited.`,
         [
           { text: 'Maybe Later', style: 'cancel' },
           {
-            text: `Monthly · $${PRICING.MONTHLY}/mo`,
-            onPress: () => startCheckout('monthly').catch(() => {}),
+            text: `Buy Report · $${PRICING.SINGLE_REPORT}`,
+            onPress: () => startCheckout('single_report').catch(() => {}),
           },
           {
-            text: `Annual · $${PRICING.ANNUAL}/yr (Save 50%)`,
+            text: `Subscribe · $${PRICING.MONTHLY}/mo (Unlimited)`,
             style: 'default',
-            onPress: () => startCheckout('annual').catch(() => {}),
+            onPress: () => startCheckout('monthly').catch(() => {}),
           },
         ]
       );
