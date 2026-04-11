@@ -40,19 +40,15 @@ if (Platform.OS !== 'web') {
 }
 
 // ── Tile Layer URLs ──────────────────────────────
+// All tiles cached for 3 days (259200s) on device, refreshed in background
+// NOAA Nautical Charts: depth soundings, contour lines, channels (the real depth data)
 const NOAA_CHART_TILE_URL = 'https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png';
-const ESRI_OCEAN_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+// ESRI Ocean Base: blue bathymetric gradient shading of ocean floor
+const ESRI_OCEAN_BASE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+// ESRI Ocean Reference: place names, ocean features, reef labels
 const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}';
+// OpenSeaMap: buoys, beacons, aids to navigation
 const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
-
-// ── Bathymetry / Relief Tile URLs ──────────────────
-// Using XYZ tile services (much more reliable than WMS on mobile)
-// GEBCO: Global ocean floor shaded relief — free, no API key
-const GEBCO_TILE_URL = 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/GEBCO_basemap_NCEI/MapServer/tile/{z}/{y}/{x}';
-// ESRI Ocean Basemap: Detailed ocean floor with bathymetric tints
-const ESRI_OCEAN_BATHY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
-// GMRT WMS fallback for ultra-detail (ledges, holes, drop-offs at high zoom)
-const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:3857&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
 
 // ── Layer definitions ────────────────────────────
 // anglerOnly = true → requires Pro Angler tier ($19.99/mo)
@@ -66,12 +62,12 @@ interface MapLayer {
 }
 
 const MAP_LAYERS: MapLayer[] = [
-  { id: 'satellite',  label: 'Satellite',          shortLabel: 'SAT',    description: 'Standard satellite imagery',                        anglerOnly: false },
-  { id: 'ocean',      label: 'GEBCO Bathymetry',   shortLabel: 'OCEAN',  description: 'Global ocean floor — shaded relief from sonar data', anglerOnly: true  },
-  { id: 'depthchart', label: 'Seafloor Detail',    shortLabel: 'DEPTH',  description: 'GMRT multibeam sonar — ledges, holes, drop-offs',   anglerOnly: true  },
-  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths',   anglerOnly: true  },
-  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                anglerOnly: true  },
-  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',           anglerOnly: true  },
+  { id: 'satellite',  label: 'Satellite',            shortLabel: 'SAT',    description: 'Standard satellite imagery',                                anglerOnly: false },
+  { id: 'ocean',      label: 'Ocean Relief',         shortLabel: 'RELIEF', description: 'Blue bathymetric shading — see the ocean floor gradient',    anglerOnly: true  },
+  { id: 'depthchart', label: 'NOAA Depth Chart',     shortLabel: 'DEPTH',  description: 'Depth soundings, contour lines, channels — the real data',   anglerOnly: true  },
+  { id: 'nautical',   label: 'Nautical Chart',       shortLabel: 'CHART',  description: 'Full NOAA nautical chart overlay',                           anglerOnly: true  },
+  { id: 'seamarks',   label: 'Sea Marks',            shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                         anglerOnly: true  },
+  { id: 'labels',     label: 'Ocean Labels',         shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',                    anglerOnly: true  },
 ];
 
 type BaseMap = 'satellite' | 'ocean';
@@ -405,46 +401,46 @@ export default function SpotsScreen() {
         loadingIndicatorColor={COLORS.seafoam}
         loadingBackgroundColor={COLORS.navy}
       >
-        {/* GEBCO/ESRI Ocean Bathymetry — ocean floor shaded relief */}
+        {/* ESRI Ocean Base — blue bathymetric gradient shading of ocean floor */}
         {baseMap === 'ocean' && UrlTile && (
           <UrlTile
-            urlTemplate={GEBCO_TILE_URL}
+            urlTemplate={ESRI_OCEAN_BASE_URL}
             maximumZ={isAnglerTier ? 13 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 1 : 0.6}
             shouldReplaceMapContent={true}
-            tileCachePath="gebco_bathy"
-            tileCacheMaxAge={604800}
+            tileCachePath="esri_ocean_base"
+            tileCacheMaxAge={259200}
             offlineMode={false}
             flipY={false}
             zIndex={1}
           />
         )}
 
-        {/* GMRT Multibeam Sonar — high-res seafloor detail (ledges, holes, drop-offs) */}
+        {/* NOAA Depth Chart — actual depth soundings, contour lines, channels */}
         {showDepthChart && UrlTile && (
           <UrlTile
-            urlTemplate={ESRI_OCEAN_BATHY_URL}
-            maximumZ={isAnglerTier ? 14 : 10}
+            urlTemplate={NOAA_CHART_TILE_URL}
+            maximumZ={isAnglerTier ? 16 : 12}
             tileSize={256}
-            opacity={isAnglerTier ? 0.85 : 0.4}
-            tileCachePath="esri_ocean_depth"
-            tileCacheMaxAge={604800}
+            opacity={isAnglerTier ? 0.9 : 0.5}
+            tileCachePath="noaa_depth"
+            tileCacheMaxAge={259200}
             offlineMode={false}
             flipY={false}
             zIndex={2}
           />
         )}
 
-        {/* NOAA Nautical Chart overlay — full quality for Pro Angler */}
+        {/* NOAA Nautical Chart overlay — full chart with all annotations */}
         {showNautical && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 14 : 10}
+            maximumZ={isAnglerTier ? 16 : 12}
             tileSize={256}
             opacity={isAnglerTier ? 0.75 : 0.4}
             tileCachePath="noaa_chart"
-            tileCacheMaxAge={86400}
+            tileCacheMaxAge={259200}
             offlineMode={false}
             flipY={false}
             zIndex={3}
@@ -455,11 +451,11 @@ export default function SpotsScreen() {
         {showSeamarks && UrlTile && (
           <UrlTile
             urlTemplate={OPENSEAMAP_TILE_URL}
-            maximumZ={isAnglerTier ? 14 : 10}
+            maximumZ={isAnglerTier ? 16 : 12}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
             tileCachePath="openseamap"
-            tileCacheMaxAge={86400}
+            tileCacheMaxAge={259200}
             offlineMode={false}
             flipY={false}
             zIndex={4}
@@ -470,11 +466,11 @@ export default function SpotsScreen() {
         {showLabels && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_REF_URL}
-            maximumZ={isAnglerTier ? 13 : 10}
+            maximumZ={isAnglerTier ? 16 : 12}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
             tileCachePath="esri_labels"
-            tileCacheMaxAge={86400}
+            tileCacheMaxAge={259200}
             offlineMode={false}
             flipY={false}
             zIndex={5}
