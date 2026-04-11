@@ -43,14 +43,24 @@ export async function checkSubscription(email: string): Promise<SubscriptionStat
 }
 
 // ── Create checkout session & redirect ───────
+export type CheckoutTier =
+  | 'single_report'
+  | 'pro_monthly' | 'pro_annual'
+  | 'angler_monthly' | 'angler_annual';
+
 export async function startCheckout(
-  tier: 'monthly' | 'annual',
+  tier: CheckoutTier,
   customerEmail?: string
 ): Promise<string | null> {
   try {
-    const priceId = tier === 'annual'
-      ? STRIPE_PRODUCTS.ANNUAL_PRICE_ID
-      : STRIPE_PRODUCTS.MONTHLY_PRICE_ID;
+    const priceMap: Record<CheckoutTier, string> = {
+      single_report:   STRIPE_PRODUCTS.SINGLE_REPORT_PRICE_ID,
+      pro_monthly:     STRIPE_PRODUCTS.PRO_MONTHLY_PRICE_ID,
+      pro_annual:      STRIPE_PRODUCTS.PRO_ANNUAL_PRICE_ID,
+      angler_monthly:  STRIPE_PRODUCTS.ANGLER_MONTHLY_PRICE_ID,
+      angler_annual:   STRIPE_PRODUCTS.ANGLER_ANNUAL_PRICE_ID,
+    };
+    const priceId = priceMap[tier];
 
     const res = await fetch(`${API}/checkout`, {
       method: 'POST',

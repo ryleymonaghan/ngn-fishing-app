@@ -241,7 +241,7 @@ export interface UserProfile {
 
 export interface SubscriptionStatus {
   isActive: boolean;
-  tier: 'free' | 'monthly' | 'annual';
+  tier: 'free' | 'pro_monthly' | 'pro_annual' | 'angler_monthly' | 'angler_annual';
   expiresAt?: string;
   stripeCustomerId?: string;
 }
@@ -281,4 +281,49 @@ export interface AuthStore {
   signOut: () => Promise<void>;
   loadUser: () => Promise<void>;
   canGenerateReport: () => boolean;
+}
+
+// ── Community (Pro Angler) ───────────────────
+export type PinType = 'bait' | 'fishing';
+
+export interface ChatMessage {
+  id: string;
+  user_id: string;
+  display_name: string;
+  message: string;
+  lat: number;
+  lng: number;
+  created_at: string;
+}
+
+export interface LivePin {
+  id: string;
+  user_id: string;
+  display_name: string;
+  lat: number;
+  lng: number;
+  pin_type: PinType;
+  description?: string;
+  species_tag?: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface CommunityStore {
+  // Chat
+  messages: ChatMessage[];
+  isLoadingChat: boolean;
+  sendMessage: (text: string, lat: number, lng: number) => Promise<void>;
+  fetchNearbyChat: (lat: number, lng: number) => Promise<void>;
+
+  // Pins
+  pins: LivePin[];
+  isLoadingPins: boolean;
+  dropPin: (pin: Omit<LivePin, 'id' | 'created_at' | 'expires_at'>) => Promise<void>;
+  removePin: (pinId: string) => Promise<void>;
+  fetchNearbyPins: (lat: number, lng: number) => Promise<void>;
+
+  // Realtime
+  subscribeRealtime: (lat: number, lng: number) => void;
+  unsubscribeRealtime: () => void;
 }

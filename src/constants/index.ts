@@ -94,20 +94,46 @@ You always respond in valid JSON matching the FishingReport schema.
 Never hallucinate GPS coordinates — use real, known fishing locations only.`,
 } as const;
 
+// ── Demo / Admin Accounts (always Pro, no Stripe needed) ──
+export const DEMO_ACCOUNTS: string[] = [
+  'demo@ngnfishing',
+  'demo@ngnfishing.com',
+  'ryleymonaghan83@gmail.com',
+];
+
 // ── Stripe Product IDs ───────────────────────
 // IMPORTANT: Replace these with real Stripe price IDs from your dashboard.
 // Stripe Dashboard → Products → NGN Pro → copy the price_xxx IDs
 export const STRIPE_PRODUCTS = {
-  MONTHLY_PRICE_ID: 'price_1TIwxoHnXVDSXKsG8G998CNt',   // $9.99/mo
-  ANNUAL_PRICE_ID:  'price_1TIx16HnXVDSXKsGkbaNo7Ay',    // $59.99/yr
+  // Free tier — single report purchase
+  SINGLE_REPORT_PRICE_ID:    'price_1TL6rfHnXVDSXKsGphHctuq2',  // $9.99 one-time
+  // Pro tier
+  PRO_MONTHLY_PRICE_ID:      'price_1TL6tPHnXVDSXKsGk0o0FalY',  // $14.99/mo
+  PRO_ANNUAL_PRICE_ID:       'price_1TL6uKHnXVDSXKsGogRJsGXd',  // $119.99/yr
+  // Pro Angler tier
+  ANGLER_MONTHLY_PRICE_ID:   'price_1TL6vBHnXVDSXKsGsWFYwork',  // $19.99/mo
+  ANGLER_ANNUAL_PRICE_ID:    'price_1TL6voHnXVDSXKsGMXeu9NcI',  // $179.99/yr
 } as const;
 
 export const PRICING = {
-  SINGLE_REPORT: 9.99,
-  MONTHLY:       9.99,
-  ANNUAL:        59.99,
-  ANNUAL_LABEL:  'Save 50%',
+  SINGLE_REPORT:  9.99,
+  PRO_MONTHLY:    14.99,
+  PRO_ANNUAL:     119.99,
+  ANGLER_MONTHLY: 19.99,
+  ANGLER_ANNUAL:  179.99,
 } as const;
+
+// ── Feature gating helpers ──────────────────
+// Use these to check what a user's subscription unlocks
+export const ANGLER_TIERS = ['angler_monthly', 'angler_annual'] as const;
+export const PRO_TIERS    = ['pro_monthly', 'pro_annual', ...ANGLER_TIERS] as const;
+
+export function isPro(tier?: string): boolean {
+  return PRO_TIERS.includes(tier as any);
+}
+export function isAngler(tier?: string): boolean {
+  return ANGLER_TIERS.includes(tier as any);
+}
 
 // ── Time Windows ─────────────────────────────
 export const TIME_WINDOWS = [

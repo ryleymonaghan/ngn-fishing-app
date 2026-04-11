@@ -5,8 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS, PRICING, FREE_REPORT_LIMIT } from '@constants/index';
-import { startCheckout } from '@services/stripeService';
+import { COLORS, PRICING } from '@constants/index';
+import { startCheckout, type CheckoutTier } from '@services/stripeService';
 import { useAuthStore } from '@stores/index';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
@@ -21,7 +21,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState<'monthly' | 'annual' | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<CheckoutTier | null>(null);
 
   const handleAuth = async () => {
     if (!email || !password) {
@@ -47,7 +47,7 @@ export default function LoginScreen() {
     router.replace('/tabs' as any);
   };
 
-  const handleUpgrade = async (tier: 'monthly' | 'annual') => {
+  const handleUpgrade = async (tier: CheckoutTier) => {
     setCheckoutLoading(tier);
     try {
       await startCheckout(tier, email || undefined);
@@ -82,22 +82,23 @@ export default function LoginScreen() {
           <View style={s.tierSection}>
             <Text style={s.sectionLabel}>CHOOSE YOUR PLAN</Text>
 
-            {/* Free Tier */}
+            {/* ── Free Tier ── */}
             <View style={s.tierCard}>
               <View style={s.tierHeader}>
                 <Text style={s.tierName}>FREE</Text>
                 <Text style={s.tierPrice}>$0</Text>
               </View>
-              <Text style={s.tierDetail}>• Fishing forecast dashboard</Text>
-              <Text style={s.tierDetail}>• Live conditions + weather</Text>
-              <Text style={s.tierDetail}>• Standard satellite map</Text>
-              <Text style={s.tierDetailMuted}>• Full AI reports — $9.99 each</Text>
+              <Text style={s.tierDetail}>• 3-day forecast dashboard</Text>
+              <Text style={s.tierDetail}>• Live tides, weather, solunar</Text>
+              <Text style={s.tierDetail}>• Species probability ratings</Text>
+              <Text style={s.tierDetail}>• Catch photo sharing with NGN branding</Text>
+              <Text style={s.tierDetailMuted}>• Full AI reports — ${PRICING.SINGLE_REPORT} each</Text>
             </View>
 
-            {/* Pro Monthly */}
+            {/* ── Pro ── */}
             <TouchableOpacity
               style={[s.tierCard, s.tierCardPro]}
-              onPress={() => handleUpgrade('monthly')}
+              onPress={() => handleUpgrade('pro_monthly')}
               activeOpacity={0.85}
               disabled={checkoutLoading !== null}
             >
@@ -107,57 +108,64 @@ export default function LoginScreen() {
                   <Text style={s.tierBadge}>MOST POPULAR</Text>
                 </View>
                 <View style={s.tierPriceBlock}>
-                  <Text style={s.tierPricePro}>${PRICING.MONTHLY}</Text>
+                  <Text style={s.tierPricePro}>${PRICING.PRO_MONTHLY}</Text>
                   <Text style={s.tierPricePer}>/month</Text>
                 </View>
               </View>
-              {checkoutLoading === 'monthly' ? (
+              {checkoutLoading === 'pro_monthly' ? (
                 <ActivityIndicator color={COLORS.navy} style={{ marginTop: 12 }} />
               ) : (
                 <>
-                  <Text style={s.tierDetailPro}>• Unlimited AI reports</Text>
-                  <Text style={s.tierDetailPro}>• Relief shading — NOAA charts + ocean bathymetry</Text>
-                  <Text style={s.tierDetailPro}>• GPS spot navigation with tap-to-navigate</Text>
-                  <Text style={s.tierDetailPro}>• Catches photo sharing with NGN branding</Text>
-                  <Text style={s.tierDetailPro}>• 3-day success probability forecast</Text>
-                  <Text style={s.tierDetailPro}>• AI-recommended bait, rigs, and tactics</Text>
+                  <Text style={s.tierDetailPro}>• Unlimited AI fishing reports</Text>
+                  <Text style={s.tierDetailPro}>• GPS spot coordinates + navigation</Text>
+                  <Text style={s.tierDetailPro}>• Basic map with spot markers</Text>
+                  <Text style={s.tierDetailPro}>• Push alerts — tides, weather, move timing</Text>
+                  <Text style={s.tierDetailPro}>• Catch photo sharing with NGN branding</Text>
+                  <Text style={s.tierDetailMutedPro}>or ${PRICING.PRO_ANNUAL}/yr — save 33%</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Pro Annual */}
+            {/* ── Pro Angler ── */}
             <TouchableOpacity
-              style={[s.tierCard, s.tierCardAnnual]}
-              onPress={() => handleUpgrade('annual')}
+              style={[s.tierCard, s.tierCardAngler]}
+              onPress={() => handleUpgrade('angler_monthly')}
               activeOpacity={0.85}
               disabled={checkoutLoading !== null}
             >
               <View style={s.tierHeader}>
                 <View>
-                  <Text style={s.tierNameAnnual}>PRO ANNUAL</Text>
-                  <Text style={s.tierBadgeAnnual}>BEST VALUE</Text>
+                  <Text style={s.tierNameAngler}>PRO ANGLER</Text>
+                  <Text style={s.tierBadgeAngler}>ALL ACCESS</Text>
                 </View>
                 <View style={s.tierPriceBlock}>
-                  <Text style={s.tierPriceAnnual}>${PRICING.ANNUAL}</Text>
-                  <Text style={s.tierPricePerAnnual}>/year</Text>
+                  <Text style={s.tierPriceAngler}>${PRICING.ANGLER_MONTHLY}</Text>
+                  <Text style={s.tierPricePerAngler}>/month</Text>
                 </View>
               </View>
-              {checkoutLoading === 'annual' ? (
+              {checkoutLoading === 'angler_monthly' ? (
                 <ActivityIndicator color={COLORS.seafoam} style={{ marginTop: 12 }} />
               ) : (
                 <>
-                  <Text style={s.tierDetailAnnual}>Everything in Pro — {PRICING.ANNUAL_LABEL}</Text>
-                  <Text style={s.tierDetailAnnualSub}>
-                    That's ${(PRICING.ANNUAL / 12).toFixed(2)}/mo — less than one bait run
-                  </Text>
+                  <Text style={s.tierDetailAngler}>• Everything in Pro</Text>
+                  <Text style={s.tierDetailAngler}>• Full relief shading + NOAA bathymetry</Text>
+                  <Text style={s.tierDetailAngler}>• Depth contour overlays</Text>
+                  <Text style={s.tierDetailAngler}>• Offshore reef + structure layers</Text>
+                  <Text style={s.tierDetailAngler}>• Priority species intel updates</Text>
+                  <Text style={s.tierDetailMutedAngler}>or ${PRICING.ANGLER_ANNUAL}/yr — save 25%</Text>
                 </>
               )}
             </TouchableOpacity>
 
             <Text style={s.charterCompare}>
               A guided charter costs $400–$800.{'\n'}
-              NGN Pro costs ${PRICING.MONTHLY}/mo.
+              NGN Pro starts at ${PRICING.PRO_MONTHLY}/mo.
             </Text>
+
+            {/* Skip — prominent, right after pricing */}
+            <TouchableOpacity onPress={handleSkip} style={s.skipBtnTop}>
+              <Text style={s.skipTextTop}>Skip for now — try the free forecast →</Text>
+            </TouchableOpacity>
           </View>
 
           {/* ── Auth Form ── */}
@@ -365,21 +373,29 @@ const s = StyleSheet.create({
     color: COLORS.white,
     lineHeight: 22,
   },
-
-  // Annual
-  tierCardAnnual: {
-    borderColor: COLORS.warning,
-    borderWidth: 1,
-    backgroundColor: `${COLORS.warning}08`,
+  tierDetailMutedPro: {
+    fontSize: 11,
+    color: COLORS.seafoam,
+    lineHeight: 22,
+    fontStyle: 'italic',
+    marginTop: 4,
+    opacity: 0.7,
   },
-  tierNameAnnual: {
+
+  // Pro Angler
+  tierCardAngler: {
+    borderColor: COLORS.warning,
+    borderWidth: 2,
+    backgroundColor: `${COLORS.warning}10`,
+  },
+  tierNameAngler: {
     fontSize: 14,
     fontWeight: '800',
     color: COLORS.warning,
     fontFamily: MONO,
     letterSpacing: 2,
   },
-  tierBadgeAnnual: {
+  tierBadgeAngler: {
     fontSize: 9,
     fontWeight: '700',
     color: '#060E1A',
@@ -391,27 +407,29 @@ const s = StyleSheet.create({
     fontFamily: MONO,
     overflow: 'hidden',
   },
-  tierPriceAnnual: {
+  tierPriceAngler: {
     fontSize: 26,
     fontWeight: '800',
     color: COLORS.warning,
     fontFamily: MONO,
   },
-  tierPricePerAnnual: {
+  tierPricePerAngler: {
     fontSize: 11,
     color: COLORS.textSecondary,
     marginTop: -2,
   },
-  tierDetailAnnual: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.warning,
-    marginTop: 4,
-  },
-  tierDetailAnnualSub: {
+  tierDetailAngler: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: COLORS.white,
+    lineHeight: 22,
+  },
+  tierDetailMutedAngler: {
+    fontSize: 11,
+    color: COLORS.warning,
+    lineHeight: 22,
+    fontStyle: 'italic',
     marginTop: 4,
+    opacity: 0.7,
   },
   charterCompare: {
     fontSize: 12,
@@ -450,6 +468,20 @@ const s = StyleSheet.create({
   toggleModeText: { fontSize: 13, color: COLORS.seafoam },
   skipBtn: { marginTop: 16, alignItems: 'center' },
   skipText: { fontSize: 12, color: COLORS.textMuted },
+  skipBtnTop: {
+    marginTop: 18,
+    alignItems: 'center',
+    backgroundColor: `${COLORS.seafoam}15`,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${COLORS.seafoam}40`,
+  },
+  skipTextTop: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.seafoam,
+  },
 
   // Footer
   footer: {

@@ -391,18 +391,21 @@ export default function ConditionsScreen() {
           <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={COLORS.seafoam} />
         }
       >
-        {/* ── Header Bar ─────────────────────────── */}
-        <View style={s.headerBar}>
+        {/* ── Header — Logo centered above brand name ── */}
+        <View style={s.headerLogoBlock}>
           <Image
             source={require('../../assets/logo-source.png')}
             style={s.headerLogo}
             resizeMode="contain"
           />
-          <View style={s.headerRight}>
-            <Text style={s.headerTime}>{fmtNow()}</Text>
-            <Text style={s.headerLoc}>{locationLabel}</Text>
-            <Text style={s.headerStation}>STA {stationId}</Text>
-          </View>
+          <Text style={s.headerBrandName}>NGN FISHING</Text>
+        </View>
+
+        {/* Info row — time, location, station */}
+        <View style={s.headerInfoRow}>
+          <Text style={s.headerTime}>{fmtNow()}</Text>
+          <Text style={s.headerLoc}>{locationLabel}</Text>
+          <Text style={s.headerStation}>STA {stationId}</Text>
         </View>
 
         {/* Slogan */}
@@ -691,17 +694,6 @@ export default function ConditionsScreen() {
           </>
         )}
 
-        {/* ── COMING SOON: BEACHCOMBER ── */}
-        <View style={s.comingSoonCard}>
-          <View style={s.comingSoonBadge}>
-            <Text style={s.comingSoonBadgeText}>COMING SOON</Text>
-          </View>
-          <Text style={s.comingSoonTitle}>Beachcomber</Text>
-          <Text style={s.comingSoonDesc}>
-            A guide to find fossilized shark teeth, sand dollars{'\n'}and other beach treasures.
-          </Text>
-        </View>
-
         {/* Bottom padding */}
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -723,30 +715,28 @@ const s = StyleSheet.create({
   content:    { padding: 12, paddingBottom: 24 },
 
   // ── Header ──────────────────────────
-  headerBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 2,
+  headerLogoBlock: {
+    alignItems: 'center',
+    marginBottom: 4,
   },
   headerLogo: {
-    width: 60,
-    height: 48,
+    width: 120,
+    height: 120,
   },
-  brandMark: {
-    fontSize: 24,
+  headerBrandName: {
+    fontSize: 22,
     fontWeight: '800',
     color: COLORS.seafoam,
-    letterSpacing: 5,
+    letterSpacing: 6,
     fontFamily: MONO,
+    marginTop: 4,
   },
-  brandSub: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    letterSpacing: 3,
-    marginTop: -3,
-    fontFamily: MONO,
+  headerInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 2,
   },
   slogan: {
     fontSize: 11,
@@ -757,7 +747,6 @@ const s = StyleSheet.create({
     marginBottom: -4,
     letterSpacing: 0.5,
   },
-  headerRight: { alignItems: 'flex-end' },
   headerTime: {
     fontSize: 14,
     color: COLORS.white,
@@ -807,42 +796,6 @@ const s = StyleSheet.create({
     fontWeight: '800',
     color: '#060E1A',
     fontFamily: MONO,
-  },
-
-  // ── Coming Soon: Beachcomber ────────
-  comingSoonCard: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#0D2B4A',
-    borderStyle: 'dashed',
-    padding: 16,
-    alignItems: 'center',
-  },
-  comingSoonBadge: {
-    backgroundColor: '#E74C3C',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 10,
-  },
-  comingSoonBadgeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    fontFamily: MONO,
-    letterSpacing: 2,
-  },
-  comingSoonTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.white,
-    fontFamily: MONO,
-    marginBottom: 6,
-  },
-  comingSoonDesc: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 16,
   },
 
   // ── Loading / Error ──────────────────

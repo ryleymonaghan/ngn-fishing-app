@@ -17,6 +17,7 @@ import {
   FREE_REPORT_LIMIT,
   OFFSHORE_SAFETY,
   REPORT_CONFIG,
+  DEMO_ACCOUNTS,
 } from '@constants/index';
 import type {
   ConditionsStore,
@@ -136,6 +137,17 @@ export const useReportStore = create<ReportStore>()(
   )
 );
 
+// ── Demo account helper — auto-grants Pro ────
+function getDemoSubscription(email: string) {
+  const isDemoAccount = DEMO_ACCOUNTS.some(
+    (demo) => email.toLowerCase() === demo.toLowerCase()
+  );
+  if (isDemoAccount) {
+    return { isActive: true, tier: 'angler_annual' as const, expiresAt: '2099-12-31' };
+  }
+  return { isActive: false, tier: 'free' as const, expiresAt: undefined };
+}
+
 // ── Auth Store ────────────────────────────────
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -150,12 +162,13 @@ export const useAuthStore = create<AuthStore>()(
           if (error) throw error;
           const session = data.session;
           if (session?.user) {
+            const userEmail = session.user.email ?? email;
             const userProfile = {
               id:           session.user.id,
-              email:        session.user.email ?? email,
+              email:        userEmail,
               fullName:     session.user.user_metadata?.name ?? '',
               reportsUsed:  0,
-              subscription: { isActive: false, tier: 'free' as const, expiresAt: undefined },
+              subscription: getDemoSubscription(userEmail),
               boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
               boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
               homeStation:  '8665530',
@@ -182,13 +195,14 @@ export const useAuthStore = create<AuthStore>()(
           if (error) throw error;
           const session = data.session;
           if (session?.user) {
+            const signupEmail = session.user.email ?? email;
             set({
               user: {
                 id:           session.user.id,
-                email:        session.user.email ?? email,
+                email:        signupEmail,
                 fullName:     name ?? '',
                 reportsUsed:  0,
-                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
+                subscription: getDemoSubscription(signupEmail),
                 boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
                 boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
                 homeStation:  '8665530',
@@ -215,13 +229,14 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
+            const loadEmail = session.user.email ?? '';
             set({
               user: {
                 id:           session.user.id,
-                email:        session.user.email ?? '',
+                email:        loadEmail,
                 fullName:     session.user.user_metadata?.name ?? '',
                 reportsUsed:  0,
-                subscription: { isActive: false, tier: 'free', expiresAt: undefined },
+                subscription: getDemoSubscription(loadEmail),
                 boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
                 boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
                 homeStation:  '8665530',
@@ -273,4 +288,108 @@ export const useForecastStore = create<ForecastStore>((set) => ({
   },
 
   setSelectedDay: (index: number) => set({ selectedDay: index }),
+}));
+
+// ── Community Store (Pro Angler) ─────────────
+import {
+  fetchNearbyChat as fetchChat,
+  sendChatMessage,
+  fetchNearbyPins as fetchPins,
+  dropPin as dropPinService,
+  removePin as removePinService,
+  subscribeToChatRealtime,
+  subscribeToPinsRealtime,
+  unsubscribeAll,
+  isWithinRadius,
+} from '@services/communityService';
+import type { CommunityStore, ChatMessage, LivePin } from '@app-types/index';
+
+export const useCommunityStore = create<CommunityStore>((set, get) => ({
+  messages:      [],
+  isLoadingChat: false,
+  pins:          [],
+  isLoadingPins: false,
+
+  fetchNearbyChat: async (lat: number, lng: number) => {
+    set({ isLoadingChat: true });
+    try {
+      const messages = await fetchChat(lat, lng);
+      set({ messages, isLoadingChat: false });
+    } catch {
+      set({ isLoadingChat: false });
+    }
+  },
+
+  sendMessage: async (text: string, lat: number, lng: number) => {
+    const user = useAuthStore.getState().user;
+    if (!user) throw new Error('Must be signed in');
+    const displayName = user.fullName ?? user.email.split('@')[0];
+    const msg = await sendChatMessage(user.id, displayName, text, lat, lng);
+    if (msg) {
+      set((s) => ({ messages: [msg, ...s.messages] }));
+    }
+  },
+
+  fetchNearbyPins: async (lat: number, lng: number) => {
+    set({ isLoadingPins: true });
+    try {
+      const pins = await fetchPins(lat, lng);
+      set({ pins, isLoadingPins: false });
+    } catch {
+      set({ isLoadingPins: false });
+    }
+  },
+
+  dropPin: async (pin) => {
+    const user = useAuthStore.getState().user;
+    if (!user) throw new Error('Must be signed in');
+    const displayName = user.fullName ?? user.email.split('@')[0];
+    const newPin = await dropPinService(
+      user.id,
+      displayName,
+      pin.lat,
+      pin.lng,
+      pin.pin_type,
+      pin.description,
+      pin.species_tag
+    );
+    if (newPin) {
+      set((s) => ({ pins: [newPin, ...s.pins] }));
+    }
+  },
+
+  removePin: async (pinId: string) => {
+    await removePinService(pinId);
+    set((s) => ({ pins: s.pins.filter((p) => p.id !== pinId) }));
+  },
+
+  subscribeRealtime: (lat: number, lng: number) => {
+    subscribeToChatRealtime((msg: ChatMessage) => {
+      // Client-side radius check for realtime messages
+      if (isWithinRadius(lat, lng, msg.lat, msg.lng)) {
+        set((s) => {
+          // Deduplicate
+          if (s.messages.some((m) => m.id === msg.id)) return s;
+          return { messages: [msg, ...s.messages] };
+        });
+      }
+    });
+    subscribeToPinsRealtime(
+      (pin: LivePin) => {
+        if (isWithinRadius(lat, lng, pin.lat, pin.lng)) {
+          set((s) => {
+            if (s.pins.some((p) => p.id === pin.id)) return s;
+            return { pins: [pin, ...s.pins] };
+          });
+        }
+      },
+      (pinId: string) => {
+        set((s) => ({ pins: s.pins.filter((p) => p.id !== pinId) }));
+      }
+    );
+  },
+
+  unsubscribeRealtime: () => {
+    unsubscribeAll();
+  },
 }));

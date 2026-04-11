@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS, DEFAULT_LOCATION, OFFSHORE_SPECIES } from '@constants/index';
+import { COLORS, DEFAULT_LOCATION, OFFSHORE_SPECIES, PRICING } from '@constants/index';
 import { useReportStore, useAuthStore, useConditionsStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
 import { scoutNearbyStructure, type ScoutResult } from '@services/scoutService';
@@ -46,21 +46,23 @@ const NOAA_ENC_TILE_URL   = 'https://gis.charttools.noaa.gov/arcgis/rest/service
 const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
 
 // ── Layer definitions ────────────────────────────
+// anglerOnly = true → requires Pro Angler tier ($19.99/mo)
+// anglerOnly = false → available to all tiers (including Free)
 interface MapLayer {
   id: string;
   label: string;
   shortLabel: string;
   description: string;
-  proOnly: boolean;
+  anglerOnly: boolean;
 }
 
 const MAP_LAYERS: MapLayer[] = [
-  { id: 'satellite',  label: 'Satellite',         shortLabel: 'SAT',    description: 'Standard satellite imagery',               proOnly: false },
-  { id: 'ocean',      label: 'Ocean Relief',       shortLabel: 'OCEAN',  description: 'ESRI bathymetric shading + depth colors',   proOnly: true  },
-  { id: 'depthchart', label: 'Depth Contours',     shortLabel: 'DEPTH',  description: 'NOAA ENC — depth soundings, contours, ledges', proOnly: true  },
-  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths', proOnly: true  },
-  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',       proOnly: true  },
-  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',  proOnly: true  },
+  { id: 'satellite',  label: 'Satellite',         shortLabel: 'SAT',    description: 'Standard satellite imagery',               anglerOnly: false },
+  { id: 'ocean',      label: 'Ocean Relief',       shortLabel: 'OCEAN',  description: 'ESRI bathymetric shading + depth colors',   anglerOnly: true  },
+  { id: 'depthchart', label: 'Depth Contours',     shortLabel: 'DEPTH',  description: 'NOAA ENC — depth soundings, contours, ledges', anglerOnly: true  },
+  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths', anglerOnly: true  },
+  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',       anglerOnly: true  },
+  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',  anglerOnly: true  },
 ];
 
 type BaseMap = 'satellite' | 'ocean';
@@ -98,7 +100,10 @@ export default function SpotsScreen() {
   const [navTargetIdx, setNavTargetIdx] = useState(0);
   const [navInfo, setNavInfo] = useState<WaypointInfo | null>(null);
 
-  const isPro = user?.subscription?.isActive ?? false;
+  // Feature gating: Pro gets basic map + GPS, Pro Angler gets all layers
+  const userTier = user?.subscription?.tier ?? 'free';
+  const isPro = user?.subscription?.isActive ?? false;  // any paid tier
+  const isAnglerTier = userTier === 'angler_monthly' || userTier === 'angler_annual';
 
   // Gather all spots from latest report, then cluster them (6–8 per prime location)
   const latestReport = activeReport ?? reports[0];
@@ -106,8 +111,8 @@ export default function SpotsScreen() {
     const spots: (FishingSpot & { speciesName?: string })[] = [];
     if (latestReport) {
       for (const sp of latestReport.species) {
-        const offshoreIds = OFFSHORE_SPECIES.map((s) => s.id);
-      const isOffshore = offshoreIds.includes(sp.speciesId);
+        const offshoreIds: string[] = OFFSHORE_SPECIES.map((s) => s.id);
+        const isOffshore = offshoreIds.includes(sp.speciesId);
         const clustered = clusterReportSpots(sp.spots, latestReport.id, isOffshore);
         for (const spot of clustered) {
           spots.push({ ...spot, speciesName: sp.speciesName });
@@ -141,11 +146,11 @@ export default function SpotsScreen() {
     if (layerId === 'seamarks')   setShowSeamarks((prev) => !prev);
     if (layerId === 'labels')     setShowLabels((prev) => !prev);
 
-    // Show upgrade banner for free users when they activate a pro layer
-    if (!isPro && layerId !== 'satellite') {
+    // Show upgrade banner when non-Angler users tap a premium layer
+    if (!isAnglerTier && layerId !== 'satellite') {
       setShowUpgradeBanner(true);
     }
-  }, [isPro]);
+  }, [isAnglerTier]);
 
   // ── Long-press to drop pin ────────────────
   const handleMapLongPress = useCallback((e: any) => {
@@ -316,17 +321,17 @@ export default function SpotsScreen() {
 
           {/* Web layer info */}
           <View style={s.webProBanner}>
-            <Text style={s.webProTitle}>PRO MAP LAYERS</Text>
+            <Text style={s.webProTitle}>PRO ANGLER MAP LAYERS</Text>
             <Text style={s.webProDesc}>
-              Upgrade to Pro to unlock ESRI Ocean Relief, NOAA Nautical Charts, and depth contours on mobile.
+              Upgrade to Pro Angler to unlock ESRI Ocean Relief, NOAA Nautical Charts, and depth contours on mobile.
             </Text>
-            {!isPro && (
+            {!isAnglerTier && (
               <TouchableOpacity
                 style={s.webProBtn}
-                onPress={() => startCheckout('monthly', user?.email)}
+                onPress={() => startCheckout('angler_monthly', user?.email)}
                 activeOpacity={0.85}
               >
-                <Text style={s.webProBtnText}>UPGRADE — $9.99/MO</Text>
+                <Text style={s.webProBtnText}>PRO ANGLER — ${PRICING.ANGLER_MONTHLY}/MO</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -395,13 +400,13 @@ export default function SpotsScreen() {
         showsScale
         onLongPress={handleMapLongPress}
       >
-        {/* ESRI Ocean Relief basemap — always render when selected, dim for free users */}
+        {/* ESRI Ocean Relief basemap — full quality for Pro Angler, preview for others */}
         {baseMap === 'ocean' && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_TILE_URL}
-            maximumZ={isPro ? 16 : 10}
+            maximumZ={isAnglerTier ? 16 : 10}
             tileSize={256}
-            opacity={isPro ? 1 : 0.6}
+            opacity={isAnglerTier ? 1 : 0.6}
             zIndex={1}
           />
         )}
@@ -410,20 +415,20 @@ export default function SpotsScreen() {
         {showDepthChart && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_ENC_TILE_URL}
-            maximumZ={isPro ? 17 : 10}
+            maximumZ={isAnglerTier ? 17 : 10}
             tileSize={256}
-            opacity={isPro ? 0.85 : 0.4}
+            opacity={isAnglerTier ? 0.85 : 0.4}
             zIndex={2}
           />
         )}
 
-        {/* NOAA Nautical Chart overlay — always render when toggled, dim for free */}
+        {/* NOAA Nautical Chart overlay — full quality for Pro Angler */}
         {showNautical && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isPro ? 15 : 10}
+            maximumZ={isAnglerTier ? 15 : 10}
             tileSize={256}
-            opacity={isPro ? 0.75 : 0.4}
+            opacity={isAnglerTier ? 0.75 : 0.4}
             zIndex={3}
           />
         )}
@@ -432,20 +437,20 @@ export default function SpotsScreen() {
         {showSeamarks && UrlTile && (
           <UrlTile
             urlTemplate={OPENSEAMAP_TILE_URL}
-            maximumZ={isPro ? 17 : 10}
+            maximumZ={isAnglerTier ? 17 : 10}
             tileSize={256}
-            opacity={isPro ? 0.9 : 0.5}
+            opacity={isAnglerTier ? 0.9 : 0.5}
             zIndex={4}
           />
         )}
 
-        {/* ESRI Ocean Reference / Labels overlay — always render when toggled */}
+        {/* ESRI Ocean Reference / Labels overlay */}
         {showLabels && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_REF_URL}
-            maximumZ={isPro ? 16 : 10}
+            maximumZ={isAnglerTier ? 16 : 10}
             tileSize={256}
-            opacity={isPro ? 0.9 : 0.5}
+            opacity={isAnglerTier ? 0.9 : 0.5}
             zIndex={5}
           />
         )}
@@ -527,20 +532,20 @@ export default function SpotsScreen() {
         )}
       </MapView>
 
-      {/* ── Pro Upgrade Banner (free users using pro layers) ── */}
-      {showUpgradeBanner && !isPro && (
+      {/* ── Pro Angler Upgrade Banner (non-Angler users using premium layers) ── */}
+      {showUpgradeBanner && !isAnglerTier && (
         <View style={s.upgradeBanner}>
           <View style={s.upgradeBannerContent}>
             <Text style={s.upgradeBannerText}>
-              Preview mode — upgrade to Pro for full zoom + HD tiles
+              Preview mode — upgrade to Pro Angler for full zoom + HD tiles
             </Text>
             <View style={s.upgradeBannerBtns}>
               <TouchableOpacity
                 style={s.upgradeBannerBtn}
-                onPress={() => startCheckout('monthly', user?.email)}
+                onPress={() => startCheckout('angler_monthly', user?.email)}
                 activeOpacity={0.85}
               >
-                <Text style={s.upgradeBannerBtnText}>UPGRADE $9.99/MO</Text>
+                <Text style={s.upgradeBannerBtnText}>PRO ANGLER ${PRICING.ANGLER_MONTHLY}/MO</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowUpgradeBanner(false)}
@@ -569,7 +574,7 @@ export default function SpotsScreen() {
           <Text style={s.layerPanelTitle}>MAP LAYERS</Text>
           {MAP_LAYERS.map((layer) => {
             const active = isLayerActive(layer.id);
-            const isProLayer = layer.proOnly && !isPro;
+            const isProLayer = layer.anglerOnly && !isAnglerTier;
             return (
               <TouchableOpacity
                 key={layer.id}
@@ -591,7 +596,7 @@ export default function SpotsScreen() {
                     </Text>
                     {isProLayer && (
                       <View style={s.proBadge}>
-                        <Text style={s.proBadgeText}>{active ? 'PREVIEW' : 'PRO'}</Text>
+                        <Text style={s.proBadgeText}>{active ? 'PREVIEW' : 'PRO ANGLER'}</Text>
                       </View>
                     )}
                   </View>
@@ -604,13 +609,13 @@ export default function SpotsScreen() {
             );
           })}
 
-          {!isPro && (
+          {!isAnglerTier && (
             <TouchableOpacity
               style={s.layerUpgradeBtn}
-              onPress={() => startCheckout('monthly', user?.email)}
+              onPress={() => startCheckout('angler_monthly', user?.email)}
               activeOpacity={0.85}
             >
-              <Text style={s.layerUpgradeText}>UNLOCK ALL LAYERS — $9.99/MO</Text>
+              <Text style={s.layerUpgradeText}>UNLOCK ALL LAYERS — PRO ANGLER ${PRICING.ANGLER_MONTHLY}/MO</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -912,7 +917,7 @@ export default function SpotsScreen() {
       </View>
 
       {/* Active layers indicator */}
-      {isPro && (baseMap === 'ocean' || showDepthChart || showNautical || showSeamarks || showLabels) && (
+      {isAnglerTier && (baseMap === 'ocean' || showDepthChart || showNautical || showSeamarks || showLabels) && (
         <View style={s.activeLayersBadge}>
           <Text style={s.activeLayersText}>
             {[
@@ -927,7 +932,7 @@ export default function SpotsScreen() {
       )}
 
       {/* ── Depth Legend (Pro users, when depth or ocean layer active) ── */}
-      {isPro && (showDepthChart || baseMap === 'ocean') && (
+      {isAnglerTier && (showDepthChart || baseMap === 'ocean') && (
         <View style={s.depthLegend}>
           <Text style={s.depthLegendTitle}>DEPTH</Text>
           <View style={s.depthLegendRow}>
@@ -991,17 +996,7 @@ export default function SpotsScreen() {
         </View>
       )}
 
-      {/* Empty state */}
-      {allSpots.length === 0 && (
-        <View style={s.emptyOverlay}>
-          <View style={s.emptyCard}>
-            <Text style={s.emptyTitle}>NO SPOTS YET</Text>
-            <Text style={s.emptySub}>
-              Generate a fishing report to see GPS spots plotted on the map with relief shading.
-            </Text>
-          </View>
-        </View>
-      )}
+      {/* Empty state removed — map shows regardless, spots appear when reports are generated */}
     </View>
   );
 }

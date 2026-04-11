@@ -102,22 +102,9 @@ export async function fetchTideData(stationId: string): Promise<TideData> {
 }
 
 // ── Fetch OpenWeather Current ─────────────────
-// On web: proxies through Railway backend (keeps API key server-side)
-// On native: calls OpenWeather API directly
+// Always proxy through Railway backend — keeps API key server-side
 export async function fetchWeatherData(lat: number, lng: number): Promise<WeatherData> {
-  let res: Response;
-
-  if (Platform.OS === 'web') {
-    res = await fetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lng}`);
-  } else {
-    const params = new URLSearchParams({
-      lat:   lat.toString(),
-      lon:   lng.toString(),
-      appid: API_KEYS.OPENWEATHER,
-      units: 'imperial',
-    });
-    res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/weather?${params}`);
-  }
+  const res = await fetch(`${BACKEND_URL}/api/weather?lat=${lat}&lon=${lng}`);
 
   if (!res.ok) throw new Error(`OpenWeather error: ${res.status}`);
 
@@ -139,18 +126,26 @@ export async function fetchWeatherData(lat: number, lng: number): Promise<Weathe
 // ── Fetch NOAA Buoy (offshore) ────────────────
 export async function fetchBuoyData(buoyId: string): Promise<BuoyData | null> {
   try {
-    const res = await fetch(`${API_ENDPOINTS.NOAA_NDBC}/${buoyId}.txt`);
+    const res = await fetch(`${BACKEND_URL}/api/buoy/${buoyId}`);
     if (!res.ok) return null;
 
     const text = await res.text();
-    const lines = text.split('\n').filter(l => !l.startsWith('#') && l.trim());
-    if (lines.length < 2) return null;
+    const allLines = text.split('\n');
 
-    const headers = lines[0].trim().split(/\s+/);
-    const values  = lines[1].trim().split(/\s+/);
+    // NDBC format: first line is #-prefixed column headers, second is #-prefixed units, then data rows
+    const headerLine = allLines.find(l => l.startsWith('#') && l.includes('WVHT'));
+    const dataLines  = allLines.filter(l => !l.startsWith('#') && l.trim());
+    if (!headerLine || dataLines.length < 1) return null;
+
+    const headers = headerLine.replace(/^#\s*/, '').trim().split(/\s+/);
+    const values  = dataLines[0].trim().split(/\s+/);
     const get = (key: string) => {
       const idx = headers.indexOf(key);
-      return idx !== -1 ? parseFloat(values[idx]) : NaN;
+      if (idx === -1) return NaN;
+      const val = values[idx];
+      // NDBC uses 'MM' for missing measurements
+      if (!val || val === 'MM') return NaN;
+      return parseFloat(val);
     };
 
     const waveHeightM = get('WVHT');
@@ -191,21 +186,9 @@ export function calcSolunar(date: Date, lat: number): { rating: number; majors: 
 }
 
 // ── Fetch 3-Day Weather Forecast ─────────────────
+// Always proxy through Railway backend — keeps API key server-side
 export async function fetchWeatherForecast(lat: number, lng: number, cnt: number = 24): Promise<any[]> {
-  let res: Response;
-  if (Platform.OS === 'web') {
-    res = await fetch(`${BACKEND_URL}/api/forecast?lat=${lat}&lon=${lng}&cnt=${cnt}`);
-    if (!res.ok) return [];
-  } else {
-    const params = new URLSearchParams({
-      lat:   lat.toString(),
-      lon:   lng.toString(),
-      appid: API_KEYS.OPENWEATHER,
-      units: 'imperial',
-      cnt:   cnt.toString(),
-    });
-    res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/forecast?${params}`);
-  }
+  const res = await fetch(`${BACKEND_URL}/api/forecast?lat=${lat}&lon=${lng}&cnt=${cnt}`);
   if (!res.ok) return [];
   const json = await res.json();
   return json.list ?? [];

@@ -9,7 +9,7 @@ import {
   OFFSHORE_SAFETY,
 } from '@constants/index';
 import { useAuthStore, useReportStore } from '@stores/index';
-import { startCheckout, openCustomerPortal } from '@services/stripeService';
+import { startCheckout, openCustomerPortal, type CheckoutTier } from '@services/stripeService';
 import { requestNotificationPermission, configureNotifications, getPendingAlerts } from '@services/notificationService';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
@@ -49,9 +49,9 @@ export default function ProfileScreen() {
   const [boatSpeed, setBoatSpeed] = useState(
     String(user?.boatSpeedMph ?? OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH)
   );
-  const [checkoutLoading, setCheckoutLoading] = useState<'monthly' | 'annual' | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<CheckoutTier | null>(null);
 
-  const handleUpgrade = async (tier: 'monthly' | 'annual') => {
+  const handleUpgrade = async (tier: CheckoutTier) => {
     setCheckoutLoading(tier);
     try {
       await startCheckout(tier, user?.email);
@@ -93,11 +93,9 @@ export default function ProfileScreen() {
           <Text style={s.cardLabel}>SUBSCRIPTION</Text>
           {isSubscribed ? (
             <>
-              <Text style={s.subStatus}>Active — {user?.subscription.tier}</Text>
+              <Text style={s.subStatus}>Active — {user?.subscription.tier?.replace('_', ' ').toUpperCase()}</Text>
               <Text style={s.subDetail}>
-                {user?.subscription.tier === 'annual'
-                  ? `$${PRICING.ANNUAL}/yr · Renews ${user?.subscription.expiresAt ?? '—'}`
-                  : `$${PRICING.MONTHLY}/mo · Renews ${user?.subscription.expiresAt ?? '—'}`}
+                Renews {user?.subscription.expiresAt ?? '—'}
               </Text>
               <TouchableOpacity
                 style={s.manageBtn}
@@ -109,34 +107,33 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <Text style={s.freeStatus}>
-                Free — {reportsLeft} of {FREE_REPORT_LIMIT} reports remaining
-              </Text>
+              <Text style={s.freeStatus}>Free Tier</Text>
+              <Text style={s.freeDetail}>AI reports available for ${PRICING.SINGLE_REPORT} each</Text>
               <View style={s.upgradeRow}>
                 <TouchableOpacity
                   style={s.upgradePill}
                   activeOpacity={0.8}
-                  onPress={() => handleUpgrade('monthly')}
+                  onPress={() => handleUpgrade('pro_monthly')}
                   disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading === 'monthly' ? (
+                  {checkoutLoading === 'pro_monthly' ? (
                     <ActivityIndicator color={COLORS.seafoam} size="small" />
                   ) : (
-                    <Text style={s.upgradePillText}>Monthly · ${PRICING.MONTHLY}/mo</Text>
+                    <Text style={s.upgradePillText}>Pro · ${PRICING.PRO_MONTHLY}/mo</Text>
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.upgradePill, s.upgradePillBest]}
                   activeOpacity={0.8}
-                  onPress={() => handleUpgrade('annual')}
+                  onPress={() => handleUpgrade('angler_monthly')}
                   disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading === 'annual' ? (
+                  {checkoutLoading === 'angler_monthly' ? (
                     <ActivityIndicator color={COLORS.navy} size="small" />
                   ) : (
                     <>
-                      <Text style={s.upgradePillTextBest}>Annual · ${PRICING.ANNUAL}/yr</Text>
-                      <Text style={s.saveBadge}>{PRICING.ANNUAL_LABEL}</Text>
+                      <Text style={s.upgradePillTextBest}>Pro Angler · ${PRICING.ANGLER_MONTHLY}/mo</Text>
+                      <Text style={s.saveBadge}>ALL ACCESS</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -235,6 +232,17 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* ── COMING SOON: BEACHCOMBER ── */}
+        <View style={s.comingSoonCard}>
+          <View style={s.comingSoonBadge}>
+            <Text style={s.comingSoonBadgeText}>COMING SOON</Text>
+          </View>
+          <Text style={s.comingSoonTitle}>Beachcomber</Text>
+          <Text style={s.comingSoonDesc}>
+            A guide to find fossilized shark teeth, sand dollars{'\n'}and other beach treasures.
+          </Text>
+        </View>
+
         {/* Version */}
         <Text style={s.version}>NGN Fishing v0.1.0 · ngnfishing.com</Text>
 
@@ -258,7 +266,8 @@ const s = StyleSheet.create({
   cardLabel:          { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5, marginBottom: 10 },
   subStatus:          { fontSize: 16, fontWeight: '600', color: COLORS.success },
   subDetail:          { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
-  freeStatus:         { fontSize: 15, fontWeight: '600', color: COLORS.warning, marginBottom: 14 },
+  freeStatus:         { fontSize: 15, fontWeight: '600', color: COLORS.warning, marginBottom: 4 },
+  freeDetail:         { fontSize: 12, color: COLORS.textSecondary, marginBottom: 14 },
   upgradeRow:         { gap: 10 },
   upgradePill: {
     backgroundColor: COLORS.navy,
@@ -337,6 +346,42 @@ const s = StyleSheet.create({
   communityLabel:     { fontSize: 14, fontWeight: '600', color: COLORS.white },
   communitySub:       { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   communityArrow:     { fontSize: 16, color: COLORS.textMuted, paddingLeft: 8 },
+
+  // ── Coming Soon: Beachcomber ────────
+  comingSoonCard: {
+    backgroundColor: COLORS.navyLight,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: `${COLORS.warning}40`,
+  },
+  comingSoonBadge: {
+    backgroundColor: COLORS.warning,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  comingSoonBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#060E1A',
+    letterSpacing: 1.5,
+    fontFamily: MONO,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.white,
+    marginBottom: 6,
+  },
+  comingSoonDesc: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
 
   version:            { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginTop: 8 },
 });

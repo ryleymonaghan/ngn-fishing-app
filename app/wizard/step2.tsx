@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, TextInput, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES, FREE_REPORT_LIMIT, PRICING } from '@constants/index';
+import { COLORS, INSHORE_SPECIES, OFFSHORE_SPECIES, SPECIAL_PACKAGES, PRICING } from '@constants/index';
 import { useWizardStore, useReportStore, useConditionsStore, useAuthStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
 
@@ -40,7 +40,7 @@ export default function WizardStep2() {
     if (!isPro) {
       Alert.alert(
         'Purchase Full Report',
-        `Free accounts include the fishing forecast. Full AI reports with GPS spots, species intel, and tactics are $${PRICING.SINGLE_REPORT} each — or subscribe for unlimited.`,
+        `Free accounts include the fishing forecast. Full AI reports with GPS spots, species intel, and tactics are $${PRICING.SINGLE_REPORT} each — or subscribe for unlimited starting at $${PRICING.PRO_MONTHLY}/mo.`,
         [
           { text: 'Maybe Later', style: 'cancel' },
           {
@@ -48,9 +48,9 @@ export default function WizardStep2() {
             onPress: () => startCheckout('single_report').catch(() => {}),
           },
           {
-            text: `Subscribe · $${PRICING.MONTHLY}/mo (Unlimited)`,
+            text: `Go Pro · $${PRICING.PRO_MONTHLY}/mo`,
             style: 'default',
-            onPress: () => startCheckout('monthly').catch(() => {}),
+            onPress: () => startCheckout('pro_monthly').catch(() => {}),
           },
         ]
       );

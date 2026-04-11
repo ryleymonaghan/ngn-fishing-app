@@ -55,6 +55,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="community"
+        options={{
+          title: 'COMMUNITY',
+          headerShown: false,
+          tabBarLabel: 'CREW',
+          tabBarIcon: ({ color }) => <TabIcon icon="📡" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="knots"
         options={{
           title: 'GUIDES',
