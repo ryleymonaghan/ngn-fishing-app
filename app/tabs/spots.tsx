@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Linking, Platform, ScrollView, Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { COLORS, DEFAULT_LOCATION } from '@constants/index';
+import { COLORS, DEFAULT_LOCATION, OFFSHORE_SPECIES } from '@constants/index';
 import { useReportStore, useAuthStore, useConditionsStore } from '@stores/index';
 import { startCheckout } from '@services/stripeService';
 import { scoutNearbyStructure, type ScoutResult } from '@services/scoutService';
@@ -20,17 +20,21 @@ import {
 } from '@services/castTrackerService';
 import { TACKLE_WEIGHTS, type CastEstimate } from '@constants/castTracker';
 import type { FishingSpot } from '@app-types/index';
+import { clusterReportSpots } from '@services/clusterService';
+import { getWaypointInfo, sortSpotsByDistance, type WaypointInfo } from '@services/waypointNavService';
 
 // react-native-maps doesn't support web — conditional import
 let MapView: any = null;
 let Marker: any = null;
 let UrlTile: any = null;
+let Polyline: any = null;
 if (Platform.OS !== 'web') {
   try {
     const Maps = require('react-native-maps');
     MapView = Maps.default;
     Marker = Maps.Marker;
     UrlTile = Maps.UrlTile;
+    Polyline = Maps.Polyline;
   } catch {}
 }
 
@@ -38,6 +42,8 @@ if (Platform.OS !== 'web') {
 const NOAA_CHART_TILE_URL = 'https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png';
 const ESRI_OCEAN_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}';
+const NOAA_ENC_TILE_URL   = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/tile/{z}/{y}/{x}';
+const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
 
 // ── Layer definitions ────────────────────────────
 interface MapLayer {
@@ -49,10 +55,12 @@ interface MapLayer {
 }
 
 const MAP_LAYERS: MapLayer[] = [
-  { id: 'satellite',  label: 'Satellite',        shortLabel: 'SAT',   description: 'Standard satellite imagery',               proOnly: false },
-  { id: 'ocean',      label: 'Ocean Relief',      shortLabel: 'OCEAN', description: 'ESRI bathymetric shading + depth colors',   proOnly: true  },
-  { id: 'nautical',   label: 'Nautical Chart',    shortLabel: 'CHART', description: 'NOAA nautical chart — channels, markers, depths', proOnly: true  },
-  { id: 'labels',     label: 'Ocean Labels',      shortLabel: 'LABEL', description: 'Place names, ocean features, reef labels',  proOnly: true  },
+  { id: 'satellite',  label: 'Satellite',         shortLabel: 'SAT',    description: 'Standard satellite imagery',               proOnly: false },
+  { id: 'ocean',      label: 'Ocean Relief',       shortLabel: 'OCEAN',  description: 'ESRI bathymetric shading + depth colors',   proOnly: true  },
+  { id: 'depthchart', label: 'Depth Contours',     shortLabel: 'DEPTH',  description: 'NOAA ENC — depth soundings, contours, ledges', proOnly: true  },
+  { id: 'nautical',   label: 'Nautical Chart',     shortLabel: 'CHART',  description: 'NOAA nautical chart — channels, markers, depths', proOnly: true  },
+  { id: 'seamarks',   label: 'Sea Marks',          shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',       proOnly: true  },
+  { id: 'labels',     label: 'Ocean Labels',       shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',  proOnly: true  },
 ];
 
 type BaseMap = 'satellite' | 'ocean';
@@ -65,6 +73,8 @@ export default function SpotsScreen() {
   const [selectedSpot, setSelectedSpot] = useState<FishingSpot | null>(null);
   const [baseMap, setBaseMap] = useState<BaseMap>('satellite');
   const [showNautical, setShowNautical] = useState(false);
+  const [showDepthChart, setShowDepthChart] = useState(false);
+  const [showSeamarks, setShowSeamarks] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const mapRef = useRef<any>(null);
@@ -83,18 +93,29 @@ export default function SpotsScreen() {
   const [showTackleSelect, setShowTackleSelect] = useState(false);
   const castAvailable = isCastTrackerAvailable();
 
+  // ── Waypoint Navigation state ─────────────
+  const [navActive, setNavActive] = useState(false);
+  const [navTargetIdx, setNavTargetIdx] = useState(0);
+  const [navInfo, setNavInfo] = useState<WaypointInfo | null>(null);
+
   const isPro = user?.subscription?.isActive ?? false;
 
-  // Gather all spots from latest report or all reports
+  // Gather all spots from latest report, then cluster them (6–8 per prime location)
   const latestReport = activeReport ?? reports[0];
-  const allSpots: (FishingSpot & { speciesName?: string })[] = [];
-  if (latestReport) {
-    for (const sp of latestReport.species) {
-      for (const spot of sp.spots) {
-        allSpots.push({ ...spot, speciesName: sp.speciesName });
+  const allSpots = useMemo(() => {
+    const spots: (FishingSpot & { speciesName?: string })[] = [];
+    if (latestReport) {
+      for (const sp of latestReport.species) {
+        const offshoreIds = OFFSHORE_SPECIES.map((s) => s.id);
+      const isOffshore = offshoreIds.includes(sp.speciesId);
+        const clustered = clusterReportSpots(sp.spots, latestReport.id, isOffshore);
+        for (const spot of clustered) {
+          spots.push({ ...spot, speciesName: sp.speciesName });
+        }
       }
     }
-  }
+    return spots;
+  }, [latestReport]);
 
   const openNavigation = useCallback((lat: number, lng: number, name: string) => {
     if (Platform.OS === 'ios') {
@@ -110,27 +131,21 @@ export default function SpotsScreen() {
     }
   }, []);
 
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+
   const handleProLayerTap = useCallback((layerId: string) => {
-    if (isPro) {
-      // Toggle the layer
-      if (layerId === 'ocean')    setBaseMap((prev) => prev === 'ocean' ? 'satellite' : 'ocean');
-      if (layerId === 'nautical') setShowNautical((prev) => !prev);
-      if (layerId === 'labels')   setShowLabels((prev) => !prev);
-    } else {
-      // Show upgrade prompt
-      Alert.alert(
-        'Pro Feature — Relief Shading',
-        'Unlock ESRI Ocean Relief, NOAA Nautical Charts, and depth contours with NGN Pro.\n\n$9.99/mo or $59.99/yr',
-        [
-          { text: 'Not Now', style: 'cancel' },
-          {
-            text: 'Upgrade to Pro',
-            onPress: () => startCheckout('monthly', user?.email),
-          },
-        ]
-      );
+    // Always toggle the layer — free users get a preview (dimmed + zoom-limited)
+    if (layerId === 'ocean')      setBaseMap((prev) => prev === 'ocean' ? 'satellite' : 'ocean');
+    if (layerId === 'depthchart') setShowDepthChart((prev) => !prev);
+    if (layerId === 'nautical')   setShowNautical((prev) => !prev);
+    if (layerId === 'seamarks')   setShowSeamarks((prev) => !prev);
+    if (layerId === 'labels')     setShowLabels((prev) => !prev);
+
+    // Show upgrade banner for free users when they activate a pro layer
+    if (!isPro && layerId !== 'satellite') {
+      setShowUpgradeBanner(true);
     }
-  }, [isPro, user?.email]);
+  }, [isPro]);
 
   // ── Long-press to drop pin ────────────────
   const handleMapLongPress = useCallback((e: any) => {
@@ -228,6 +243,66 @@ export default function SpotsScreen() {
     };
   }, []);
 
+  // ── Waypoint Navigation — update nav info when target or location changes ──
+  const navTarget = navActive && allSpots.length > 0 ? allSpots[navTargetIdx % allSpots.length] : null;
+
+  useEffect(() => {
+    if (!navActive || !navTarget || !conditions?.location) {
+      setNavInfo(null);
+      return;
+    }
+    const userLat = conditions.location.lat;
+    const userLng = conditions.location.lng;
+    const info = getWaypointInfo(
+      userLat, userLng,
+      navTarget.coordinates.lat, navTarget.coordinates.lng,
+      user?.boatSpeedMph ?? 25,
+    );
+    setNavInfo(info);
+  }, [navActive, navTargetIdx, conditions?.location, navTarget, user?.boatSpeedMph]);
+
+  const handleNavNext = useCallback(() => {
+    if (allSpots.length === 0) return;
+    const nextIdx = (navTargetIdx + 1) % allSpots.length;
+    setNavTargetIdx(nextIdx);
+    // Animate map to next spot
+    const spot = allSpots[nextIdx];
+    mapRef.current?.animateToRegion({
+      latitude: spot.coordinates.lat,
+      longitude: spot.coordinates.lng,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }, 500);
+  }, [navTargetIdx, allSpots]);
+
+  const handleNavPrev = useCallback(() => {
+    if (allSpots.length === 0) return;
+    const prevIdx = (navTargetIdx - 1 + allSpots.length) % allSpots.length;
+    setNavTargetIdx(prevIdx);
+    const spot = allSpots[prevIdx];
+    mapRef.current?.animateToRegion({
+      latitude: spot.coordinates.lat,
+      longitude: spot.coordinates.lng,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }, 500);
+  }, [navTargetIdx, allSpots]);
+
+  const toggleNav = useCallback(() => {
+    if (!navActive && allSpots.length > 0) {
+      // Start navigation — sort spots by distance and start with nearest
+      if (conditions?.location) {
+        const sorted = sortSpotsByDistance(allSpots, conditions.location.lat, conditions.location.lng);
+        const nearestIdx = allSpots.indexOf(sorted[0]);
+        setNavTargetIdx(nearestIdx >= 0 ? nearestIdx : 0);
+      }
+      setNavActive(true);
+    } else {
+      setNavActive(false);
+      setNavInfo(null);
+    }
+  }, [navActive, allSpots, conditions?.location]);
+
   // ── Web fallback (no react-native-maps on web) ────
   if (Platform.OS === 'web' || !MapView) {
     return (
@@ -299,10 +374,12 @@ export default function SpotsScreen() {
       };
 
   const isLayerActive = (id: string) => {
-    if (id === 'satellite') return baseMap === 'satellite';
-    if (id === 'ocean')     return baseMap === 'ocean';
-    if (id === 'nautical')  return showNautical;
-    if (id === 'labels')    return showLabels;
+    if (id === 'satellite')  return baseMap === 'satellite';
+    if (id === 'ocean')      return baseMap === 'ocean';
+    if (id === 'depthchart') return showDepthChart;
+    if (id === 'nautical')   return showNautical;
+    if (id === 'seamarks')   return showSeamarks;
+    if (id === 'labels')     return showLabels;
     return false;
   };
 
@@ -318,36 +395,58 @@ export default function SpotsScreen() {
         showsScale
         onLongPress={handleMapLongPress}
       >
-        {/* ESRI Ocean Relief basemap (Pro) */}
-        {baseMap === 'ocean' && isPro && UrlTile && (
+        {/* ESRI Ocean Relief basemap — always render when selected, dim for free users */}
+        {baseMap === 'ocean' && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_TILE_URL}
-            maximumZ={16}
+            maximumZ={isPro ? 16 : 10}
             tileSize={256}
-            opacity={1}
+            opacity={isPro ? 1 : 0.6}
             zIndex={1}
           />
         )}
 
-        {/* NOAA Nautical Chart overlay (Pro, toggleable) */}
-        {showNautical && isPro && UrlTile && (
+        {/* NOAA ENC Depth Contours — depth soundings, contour lines, ledges */}
+        {showDepthChart && UrlTile && (
           <UrlTile
-            urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={15}
+            urlTemplate={NOAA_ENC_TILE_URL}
+            maximumZ={isPro ? 17 : 10}
             tileSize={256}
-            opacity={0.75}
+            opacity={isPro ? 0.85 : 0.4}
             zIndex={2}
           />
         )}
 
-        {/* ESRI Ocean Reference / Labels overlay (Pro, toggleable) */}
-        {showLabels && isPro && UrlTile && (
+        {/* NOAA Nautical Chart overlay — always render when toggled, dim for free */}
+        {showNautical && UrlTile && (
+          <UrlTile
+            urlTemplate={NOAA_CHART_TILE_URL}
+            maximumZ={isPro ? 15 : 10}
+            tileSize={256}
+            opacity={isPro ? 0.75 : 0.4}
+            zIndex={3}
+          />
+        )}
+
+        {/* OpenSeaMap Seamarks — buoys, beacons, aids to navigation */}
+        {showSeamarks && UrlTile && (
+          <UrlTile
+            urlTemplate={OPENSEAMAP_TILE_URL}
+            maximumZ={isPro ? 17 : 10}
+            tileSize={256}
+            opacity={isPro ? 0.9 : 0.5}
+            zIndex={4}
+          />
+        )}
+
+        {/* ESRI Ocean Reference / Labels overlay — always render when toggled */}
+        {showLabels && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_REF_URL}
-            maximumZ={16}
+            maximumZ={isPro ? 16 : 10}
             tileSize={256}
-            opacity={0.9}
-            zIndex={3}
+            opacity={isPro ? 0.9 : 0.5}
+            zIndex={5}
           />
         )}
 
@@ -412,7 +511,47 @@ export default function SpotsScreen() {
             opacity={0.4}
           />
         ))}
+
+        {/* Waypoint navigation route line */}
+        {navActive && navTarget && conditions?.location && Polyline && (
+          <Polyline
+            coordinates={[
+              { latitude: conditions.location.lat, longitude: conditions.location.lng },
+              { latitude: navTarget.coordinates.lat, longitude: navTarget.coordinates.lng },
+            ]}
+            strokeColor={COLORS.seafoam}
+            strokeWidth={3}
+            lineDashPattern={[8, 6]}
+            zIndex={10}
+          />
+        )}
       </MapView>
+
+      {/* ── Pro Upgrade Banner (free users using pro layers) ── */}
+      {showUpgradeBanner && !isPro && (
+        <View style={s.upgradeBanner}>
+          <View style={s.upgradeBannerContent}>
+            <Text style={s.upgradeBannerText}>
+              Preview mode — upgrade to Pro for full zoom + HD tiles
+            </Text>
+            <View style={s.upgradeBannerBtns}>
+              <TouchableOpacity
+                style={s.upgradeBannerBtn}
+                onPress={() => startCheckout('monthly', user?.email)}
+                activeOpacity={0.85}
+              >
+                <Text style={s.upgradeBannerBtnText}>UPGRADE $9.99/MO</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowUpgradeBanner(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.upgradeBannerDismiss}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* ── Layer Control Panel Toggle ─────────── */}
       <TouchableOpacity
@@ -430,7 +569,7 @@ export default function SpotsScreen() {
           <Text style={s.layerPanelTitle}>MAP LAYERS</Text>
           {MAP_LAYERS.map((layer) => {
             const active = isLayerActive(layer.id);
-            const locked = layer.proOnly && !isPro;
+            const isProLayer = layer.proOnly && !isPro;
             return (
               <TouchableOpacity
                 key={layer.id}
@@ -438,6 +577,7 @@ export default function SpotsScreen() {
                 onPress={() => {
                   if (layer.id === 'satellite') {
                     setBaseMap('satellite');
+                    setShowUpgradeBanner(false);
                   } else {
                     handleProLayerTap(layer.id);
                   }
@@ -449,9 +589,9 @@ export default function SpotsScreen() {
                     <Text style={[s.layerName, active && s.layerNameActive]}>
                       {layer.shortLabel}
                     </Text>
-                    {locked && (
+                    {isProLayer && (
                       <View style={s.proBadge}>
-                        <Text style={s.proBadgeText}>PRO</Text>
+                        <Text style={s.proBadgeText}>{active ? 'PREVIEW' : 'PRO'}</Text>
                       </View>
                     )}
                   </View>
@@ -474,6 +614,20 @@ export default function SpotsScreen() {
             </TouchableOpacity>
           )}
         </View>
+      )}
+
+      {/* ── Waypoint Navigation Toggle Button ── */}
+      {allSpots.length > 0 && (
+        <TouchableOpacity
+          style={[s.navToggleBtn, navActive && s.navToggleBtnActive]}
+          onPress={toggleNav}
+          activeOpacity={0.8}
+        >
+          <Text style={s.navToggleIcon}>🧭</Text>
+          <Text style={[s.navToggleText, navActive && s.navToggleTextActive]}>
+            {navActive ? 'NAV ON' : 'NAV'}
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* ── Cast Tracker Toggle Button ─────── */}
@@ -577,6 +731,73 @@ export default function SpotsScreen() {
             activeOpacity={0.85}
           >
             <Text style={s.spotDetailNavText}>NAVIGATE TO RIG →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Waypoint Navigation Compass Card ── */}
+      {navActive && navTarget && navInfo && (
+        <View style={s.navCard}>
+          <View style={s.navCardHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.navCardTitle}>NAVIGATING TO</Text>
+              <Text style={s.navCardSpotName} numberOfLines={1}>
+                {navTarget.name}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={toggleNav}>
+              <Text style={s.spotDetailClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Compass bearing + stats row */}
+          <View style={s.navCardStats}>
+            <View style={s.navStat}>
+              <Text style={s.navStatValue}>{navInfo.bearingDeg}°</Text>
+              <Text style={s.navStatLabel}>BEARING</Text>
+            </View>
+            <View style={s.navStatDivider} />
+            <View style={s.navStatCenter}>
+              <Text style={s.navCompassValue}>{navInfo.bearingCardinal}</Text>
+              <Text style={s.navStatLabel}>HEADING</Text>
+            </View>
+            <View style={s.navStatDivider} />
+            <View style={s.navStat}>
+              <Text style={s.navStatValue}>{navInfo.distanceLabel}</Text>
+              <Text style={s.navStatLabel}>DISTANCE</Text>
+            </View>
+            <View style={s.navStatDivider} />
+            <View style={s.navStat}>
+              <Text style={s.navStatValue}>{navInfo.etaLabel}</Text>
+              <Text style={s.navStatLabel}>ETA</Text>
+            </View>
+          </View>
+
+          {/* Coordinates */}
+          <Text style={s.navCardCoords}>
+            {navTarget.coordinates.lat.toFixed(5)}, {navTarget.coordinates.lng.toFixed(5)}
+          </Text>
+
+          {/* Prev / Next controls */}
+          <View style={s.navControls}>
+            <TouchableOpacity style={s.navPrevBtn} onPress={handleNavPrev} activeOpacity={0.75}>
+              <Text style={s.navControlText}>◀ PREV</Text>
+            </TouchableOpacity>
+            <Text style={s.navSpotCounter}>
+              {(navTargetIdx % allSpots.length) + 1} / {allSpots.length}
+            </Text>
+            <TouchableOpacity style={s.navNextBtn} onPress={handleNavNext} activeOpacity={0.75}>
+              <Text style={s.navControlText}>NEXT ▶</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Navigate externally */}
+          <TouchableOpacity
+            style={s.navExternalBtn}
+            onPress={() => openNavigation(navTarget.coordinates.lat, navTarget.coordinates.lng, navTarget.name)}
+            activeOpacity={0.85}
+          >
+            <Text style={s.spotDetailNavText}>OPEN IN MAPS →</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -691,15 +912,48 @@ export default function SpotsScreen() {
       </View>
 
       {/* Active layers indicator */}
-      {isPro && (baseMap === 'ocean' || showNautical || showLabels) && (
+      {isPro && (baseMap === 'ocean' || showDepthChart || showNautical || showSeamarks || showLabels) && (
         <View style={s.activeLayersBadge}>
           <Text style={s.activeLayersText}>
             {[
               baseMap === 'ocean' ? 'RELIEF' : null,
+              showDepthChart ? 'DEPTH' : null,
               showNautical ? 'CHART' : null,
+              showSeamarks ? 'MARKS' : null,
               showLabels ? 'LABELS' : null,
             ].filter(Boolean).join(' + ')}
           </Text>
+        </View>
+      )}
+
+      {/* ── Depth Legend (Pro users, when depth or ocean layer active) ── */}
+      {isPro && (showDepthChart || baseMap === 'ocean') && (
+        <View style={s.depthLegend}>
+          <Text style={s.depthLegendTitle}>DEPTH</Text>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#ADE8F4' }]} />
+            <Text style={s.depthLegendLabel}>0–6 ft</Text>
+          </View>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#48CAE4' }]} />
+            <Text style={s.depthLegendLabel}>6–15 ft</Text>
+          </View>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#0096C7' }]} />
+            <Text style={s.depthLegendLabel}>15–30 ft</Text>
+          </View>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#0077B6' }]} />
+            <Text style={s.depthLegendLabel}>30–60 ft</Text>
+          </View>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#023E8A' }]} />
+            <Text style={s.depthLegendLabel}>60–120 ft</Text>
+          </View>
+          <View style={s.depthLegendRow}>
+            <View style={[s.depthSwatch, { backgroundColor: '#03045E' }]} />
+            <Text style={s.depthLegendLabel}>120+ ft</Text>
+          </View>
         </View>
       )}
 
@@ -760,6 +1014,50 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#060E1A' },
   mapContainer: { flex: 1 },
   map: { flex: 1 },
+
+  // ── Upgrade Banner ────────────────────
+  upgradeBanner: {
+    position: 'absolute',
+    bottom: 100,
+    left: 12,
+    right: 12,
+  },
+  upgradeBannerContent: {
+    backgroundColor: 'rgba(6,14,26,0.92)',
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    padding: 14,
+    alignItems: 'center',
+  },
+  upgradeBannerText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  upgradeBannerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  upgradeBannerBtn: {
+    backgroundColor: COLORS.seafoam,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  upgradeBannerBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+  },
+  upgradeBannerDismiss: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+  },
 
   // ── Layer Toggle Button ──────────────
   layerToggleBtn: {
@@ -920,6 +1218,193 @@ const s = StyleSheet.create({
     fontFamily: MONO,
     letterSpacing: 1,
     fontWeight: '600',
+  },
+
+  // ── Waypoint Nav Toggle Button ───────
+  navToggleBtn: {
+    position: 'absolute',
+    top: 60,
+    right: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    gap: 5,
+  },
+  navToggleBtnActive: {
+    borderColor: COLORS.seafoam,
+    backgroundColor: `${COLORS.seafoam}15`,
+  },
+  navToggleIcon: {
+    fontSize: 13,
+  },
+  navToggleText: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  navToggleTextActive: {
+    color: COLORS.seafoam,
+  },
+
+  // ── Waypoint Nav Compass Card ─────────
+  navCard: {
+    position: 'absolute',
+    bottom: 24,
+    left: 12,
+    right: 12,
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    padding: 14,
+  },
+  navCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  navCardTitle: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  navCardSpotName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.white,
+    fontFamily: MONO,
+    marginTop: 2,
+  },
+  navCardStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  navStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  navStatCenter: {
+    alignItems: 'center',
+    flex: 1.2,
+  },
+  navStatValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.white,
+    fontFamily: MONO,
+  },
+  navCompassValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  navStatLabel: {
+    fontSize: 8,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginTop: 3,
+  },
+  navStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: GRID_LINE,
+  },
+  navCardCoords: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  navControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  navPrevBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: `${GRID_LINE}`,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+  },
+  navNextBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: `${GRID_LINE}`,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+  },
+  navControlText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
+    letterSpacing: 1,
+  },
+  navSpotCounter: {
+    fontSize: 11,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  navExternalBtn: {
+    backgroundColor: COLORS.seafoam,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+
+  // ── Depth Legend ─────────────────────
+  depthLegend: {
+    position: 'absolute',
+    bottom: 90,
+    left: 12,
+    backgroundColor: 'rgba(10,37,64,0.92)',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(78,205,196,0.25)',
+  },
+  depthLegendTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  depthLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  depthSwatch: {
+    width: 14,
+    height: 10,
+    borderRadius: 2,
+    marginRight: 6,
+  },
+  depthLegendLabel: {
+    fontSize: 9,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
   },
 
   // ── Spot detail card ───────────────

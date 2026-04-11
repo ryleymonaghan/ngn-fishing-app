@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { fetchLiveConditions } from '@services/conditionsService';
 import { generateFishingReport } from '@services/reportService';
+import { fetchSpeciesForecast } from '@services/forecastService';
 import { saveReportToCloud, fetchReportsFromCloud, syncUserProfile } from '@services/supabaseSync';
 import { supabase } from '@lib/supabase';
 import {
@@ -15,12 +16,14 @@ import {
   DEFAULT_LOCATION,
   FREE_REPORT_LIMIT,
   OFFSHORE_SAFETY,
+  REPORT_CONFIG,
 } from '@constants/index';
 import type {
   ConditionsStore,
   WizardStore,
   ReportStore,
   AuthStore,
+  ForecastStore,
   WizardDraft,
   FishingReport,
   LiveConditions,
@@ -102,14 +105,16 @@ export const useReportStore = create<ReportStore>()(
         try {
           const report = await generateFishingReport(draft, conditions);
           set((state) => ({
-            reports:      [report, ...state.reports].slice(0, 50), // keep last 50
+            reports:      [report, ...state.reports].slice(0, REPORT_CONFIG.HISTORY_LIMIT),
             activeReport: report,
             isGenerating: false,
           }));
-          // Cloud sync — fire and forget
+          // Cloud sync — fire and forget (log errors for debugging)
           const userId = useAuthStore.getState().user?.id;
           if (userId) {
-            saveReportToCloud(userId, report).catch(() => {});
+            saveReportToCloud(userId, report).catch((err) => {
+              console.warn('[NGN] Cloud sync failed:', err?.message ?? err);
+            });
           }
         } catch (err: any) {
           set({ error: err.message, isGenerating: false });
@@ -247,3 +252,25 @@ export const useAuthStore = create<AuthStore>()(
     }
   )
 );
+
+// ── Forecast Store ───────────────────────────────
+// No persistence — refetches each session
+export const useForecastStore = create<ForecastStore>((set) => ({
+  forecasts:   [],
+  selectedDay: 0,
+  isLoading:   false,
+  error:       null,
+
+  fetchForecast: async (location: UserLocation) => {
+    set({ isLoading: true, error: null });
+    try {
+      const forecasts = await fetchSpeciesForecast(location);
+      set({ forecasts, selectedDay: 0, isLoading: false });
+    } catch (err: any) {
+      console.warn('[NGN] Forecast fetch error:', err.message);
+      set({ error: err.message, isLoading: false });
+    }
+  },
+
+  setSelectedDay: (index: number) => set({ selectedDay: index }),
+}));

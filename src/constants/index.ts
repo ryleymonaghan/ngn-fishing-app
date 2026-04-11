@@ -85,7 +85,7 @@ export const NOAA_BUOYS = {
 
 // ── Claude API Config ────────────────────────
 export const CLAUDE_CONFIG = {
-  MODEL:          'claude-sonnet-4-6',
+  MODEL:          'claude-sonnet-4-5-20250514',
   MAX_TOKENS:     4096,
   SYSTEM_PROMPT: `You are NGN Fishing — an elite AI fishing guide for the Southeast USA coast. 
 You have deep knowledge of inshore and offshore fishing from NC to FL, including tides, 
@@ -98,8 +98,8 @@ Never hallucinate GPS coordinates — use real, known fishing locations only.`,
 // IMPORTANT: Replace these with real Stripe price IDs from your dashboard.
 // Stripe Dashboard → Products → NGN Pro → copy the price_xxx IDs
 export const STRIPE_PRODUCTS = {
-  MONTHLY_PRICE_ID: 'price_REPLACE_MONTHLY',   // $9.99/mo — replace with real price ID
-  ANNUAL_PRICE_ID:  'price_REPLACE_ANNUAL',    // $59.99/yr — replace with real price ID
+  MONTHLY_PRICE_ID: 'price_1TIwxoHnXVDSXKsG8G998CNt',   // $9.99/mo
+  ANNUAL_PRICE_ID:  'price_1TIx16HnXVDSXKsGkbaNo7Ay',    // $59.99/yr
 } as const;
 
 export const PRICING = {
@@ -324,6 +324,69 @@ export const ROUTES = {
   REPORT: '/report/[id]',
 } as const;
 
+// ── Map & UI Config ─────────────────────────
+export const MAP_CONFIG = {
+  DRAWER_WIDTH:            260,
+  ANIMATION_DURATION_MS:   220,
+  DEFAULT_MAP_DELTA:       0.15,
+  WIDE_MAP_DELTA:          0.3,
+  PIN_DROP_DELTA:          0.5,
+  MAX_ZOOM_PRO:            17,
+  MAX_ZOOM_FREE:           10,
+  TILE_SIZE:               256,
+} as const;
+
+// ── Photo Config ─────────────────────────────
+export const PHOTO_CONFIG = {
+  QUALITY:        0.85,
+  ASPECT_RATIO:   [4, 3] as const,
+  GRID_PADDING:   36,
+} as const;
+
+// ── Report Config ────────────────────────────
+export const REPORT_CONFIG = {
+  MAX_TOKENS:              8192,
+  HISTORY_LIMIT:           50,
+  FORECAST_DAYS:           7,
+  COORD_PRECISION:         4,
+  REPORT_GEN_ESTIMATE:     '15–20 seconds',
+} as const;
+
+// ── Geolocation Config ──────────────────────
+export const GEO_CONFIG = {
+  TIMEOUT_MS:              10000,
+  LOCATION_REFETCH_DEG:    0.1,
+} as const;
+
+// ── Weather Alert Thresholds ─────────────────
+export const WEATHER_THRESHOLDS = {
+  HIGH_WIND_MPH:           20,
+  SMALL_CRAFT_WIND_MPH:    25,
+  GALE_WIND_MPH:           30,
+  HIGH_RAIN_PCT:           80,
+  CALM_WIND_MPH:           10,
+  LIGHTNING_KEYWORDS:      ['thunderstorm', 'lightning', 'severe'] as const,
+} as const;
+
+// ── Notification Config ──────────────────────
+export const NOTIFICATION_CONFIG = {
+  HEADS_UP_MINUTES:        15,
+  TIDE_ALERT_MINUTES:      20,
+  CHANNEL_NAME:            'move-alerts',
+} as const;
+
+// ── Affiliate Config ─────────────────────────
+export const AFFILIATE_CONFIG = {
+  AMAZON_TAG:              'ngnfishing-20',
+} as const;
+
+// ── Community Links ──────────────────────────
+export const COMMUNITY_LINKS = {
+  FACEBOOK:  'https://www.facebook.com/groups/ngnfishing',
+  INSTAGRAM: 'https://www.instagram.com/ngnfishing',
+  WEBSITE:   'https://ngnfishing.com',
+} as const;
+
 // ── Async Storage Keys ───────────────────────
 export const STORAGE_KEYS = {
   AUTH_TOKEN:       'ngn:auth_token',
@@ -388,3 +451,52 @@ export const FISHING_LOCATIONS: FishingLocationPreset[] = [
 
 // Group locations by region for the picker
 export const LOCATION_REGIONS = ['SC', 'NC', 'GA', 'FL'] as const;
+
+// ── 5-Day Species Forecast ──────────────────────
+import type { ForecastCategoryId } from '@app-types/index';
+
+export const FORECAST_DAYS = 5;
+
+// 12-month activity factor per species (index 0 = January, 11 = December)
+// Derived from each species' season field + SE USA fishing knowledge
+export const SPECIES_SEASONALITY: Record<string, number[]> = {
+  // Inshore
+  flounder:         [0.4, 0.4, 0.5, 0.6, 0.7, 0.7, 0.7, 0.7, 0.9, 1.0, 0.8, 0.5],
+  redfish:          [0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.8, 0.9, 1.0, 1.0, 0.8, 0.7],
+  speckled_trout:   [1.0, 1.0, 0.8, 0.6, 0.5, 0.4, 0.4, 0.5, 0.6, 0.7, 0.9, 1.0],
+  sheepshead:       [0.6, 0.7, 1.0, 1.0, 0.8, 0.5, 0.4, 0.4, 0.5, 0.6, 0.6, 0.6],
+  black_drum:       [0.7, 0.7, 0.8, 0.8, 0.7, 0.6, 0.6, 0.6, 0.7, 0.8, 0.7, 0.7],
+  tarpon:           [0.0, 0.0, 0.2, 0.5, 0.8, 1.0, 1.0, 1.0, 0.8, 0.5, 0.1, 0.0],
+  cobia:            [0.0, 0.1, 0.5, 1.0, 1.0, 0.7, 0.3, 0.1, 0.0, 0.0, 0.0, 0.0],
+  spanish_mackerel: [0.0, 0.0, 0.3, 0.7, 1.0, 1.0, 1.0, 0.9, 0.7, 0.4, 0.1, 0.0],
+  king_mackerel:    [0.0, 0.0, 0.3, 0.6, 0.9, 1.0, 1.0, 0.9, 0.7, 0.4, 0.1, 0.0],
+  bull_shark:       [0.5, 0.5, 0.6, 0.7, 0.8, 1.0, 1.0, 1.0, 0.8, 0.7, 0.5, 0.5],
+  // Offshore
+  mahi:             [0.0, 0.1, 0.3, 0.6, 1.0, 1.0, 1.0, 0.8, 0.6, 0.3, 0.1, 0.0],
+  wahoo:            [0.6, 0.6, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.6],
+  yellowfin:        [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7, 0.7],
+  blackfin:         [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7, 0.7],
+  gag_grouper:      [0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7, 0.7, 0.7],
+  red_snapper:      [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  amberjack:        [0.7, 0.7, 0.7, 0.8, 0.9, 0.9, 0.9, 0.9, 0.8, 0.7, 0.7, 0.7],
+  sailfish:         [0.8, 0.9, 1.0, 0.9, 0.6, 0.3, 0.1, 0.1, 0.2, 0.4, 0.6, 0.8],
+};
+
+export const FORECAST_CATEGORIES: { id: ForecastCategoryId; name: string; speciesIds: string[] }[] = [
+  {
+    id: 'inshore',
+    name: 'Inshore',
+    speciesIds: ['flounder', 'redfish', 'speckled_trout', 'sheepshead', 'black_drum',
+                 'tarpon', 'cobia', 'spanish_mackerel', 'king_mackerel', 'bull_shark'],
+  },
+  {
+    id: 'offshore_trolling',
+    name: 'Offshore Trolling',
+    speciesIds: ['mahi', 'wahoo', 'yellowfin', 'blackfin', 'sailfish'],
+  },
+  {
+    id: 'offshore_reef',
+    name: 'Offshore Reef & Bottom',
+    speciesIds: ['gag_grouper', 'red_snapper', 'amberjack'],
+  },
+];

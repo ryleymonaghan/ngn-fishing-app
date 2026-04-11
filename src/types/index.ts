@@ -78,6 +78,52 @@ export interface DayForecast {
   successLabel: string;        // 'Excellent', 'Good', 'Fair', 'Poor'
 }
 
+// ── Species Forecast (per-species, per-day) ──
+export interface SpeciesForecast {
+  speciesId: string;
+  speciesName: string;
+  catchProbability: number;    // 0-100
+  probabilityLabel: string;    // 'Excellent' | 'Good' | 'Fair' | 'Poor'
+  factors: {
+    season: number;            // 0-100 contribution
+    solunar: number;
+    tide: number;
+    weather: number;
+  };
+}
+
+// ── Category grouping ──
+export type ForecastCategoryId = 'inshore' | 'offshore_trolling' | 'offshore_reef';
+
+export interface CategoryForecast {
+  categoryId: ForecastCategoryId;
+  categoryName: string;        // 'Inshore', 'Offshore Trolling', 'Offshore Reef'
+  topScore: number;            // best species score in category
+  species: SpeciesForecast[];
+}
+
+// ── Full daily species forecast ──
+export interface DailyFishingForecast {
+  date: string;                // YYYY-MM-DD
+  dayLabel: string;            // 'Today', 'Tomorrow', 'Wednesday'
+  overallScore: number;        // 0-100 avg of top species
+  overallLabel: string;
+  categories: CategoryForecast[];
+  weather: DayForecast['weather'];
+  solunar: SolunarData;
+  tideEvents: TideReading[];
+}
+
+// ── Forecast Store ──
+export interface ForecastStore {
+  forecasts: DailyFishingForecast[];
+  selectedDay: number;         // index into forecasts[]
+  isLoading: boolean;
+  error: string | null;
+  fetchForecast: (location: UserLocation) => Promise<void>;
+  setSelectedDay: (index: number) => void;
+}
+
 export interface LiveConditions {
   weather: WeatherData;
   tides: TideData;
@@ -126,6 +172,9 @@ export interface RigRecommendation {
   leader?: string;       // '15 lb fluorocarbon'
   weight?: string;       // '3/8 oz jig head'
   baitPresentation: string;
+  knotName?: string;     // 'Palomar Knot' — recommended knot for this rig
+  knotId?: string;       // 'palomar' — links to knot guide
+  tackleList?: string[]; // Full list of tackle items needed for this rig
 }
 
 // ── Species Report Section ───────────────────

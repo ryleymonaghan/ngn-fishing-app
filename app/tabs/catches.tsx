@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, Image, Share,
-  StyleSheet, Platform, Alert, Dimensions,
+  StyleSheet, Platform, Alert, Dimensions, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, APP_NAME } from '@constants/index';
 
 // Conditional imports for native-only modules
@@ -15,6 +16,7 @@ try { Sharing = require('expo-sharing'); } catch {}
 const { width: SCREEN_W } = Dimensions.get('window');
 const PHOTO_SIZE = (SCREEN_W - 36) / 2; // 2-column grid with gaps
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
+const CATCHES_STORAGE_KEY = 'ngn_catches_photos';
 
 interface CatchPhoto {
   id: string;
@@ -24,9 +26,39 @@ interface CatchPhoto {
   species?: string;
 }
 
+// ── Persist catches to AsyncStorage ──────────
+async function saveCatches(photos: CatchPhoto[]) {
+  try {
+    await AsyncStorage.setItem(CATCHES_STORAGE_KEY, JSON.stringify(photos));
+  } catch {}
+}
+async function loadCatches(): Promise<CatchPhoto[]> {
+  try {
+    const raw = await AsyncStorage.getItem(CATCHES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function CatchesScreen() {
   const [photos, setPhotos] = useState<CatchPhoto[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<CatchPhoto | null>(null);
+  const [editingSpecies, setEditingSpecies] = useState(false);
+
+  // Load saved catches on mount
+  useEffect(() => {
+    loadCatches().then(setPhotos);
+  }, []);
+
+  // Save whenever photos change (after initial load)
+  const updatePhotos = useCallback((updater: (prev: CatchPhoto[]) => CatchPhoto[]) => {
+    setPhotos(prev => {
+      const next = updater(prev);
+      saveCatches(next);
+      return next;
+    });
+  }, []);
 
   const pickImage = useCallback(async () => {
     if (!ImagePicker) {
@@ -55,9 +87,9 @@ export default function CatchesScreen() {
           month: 'short', day: 'numeric', year: 'numeric',
         }),
       };
-      setPhotos(prev => [newPhoto, ...prev]);
+      updatePhotos(prev => [newPhoto, ...prev]);
     }
-  }, []);
+  }, [updatePhotos]);
 
   const takePhoto = useCallback(async () => {
     if (!ImagePicker) {
@@ -85,9 +117,29 @@ export default function CatchesScreen() {
           month: 'short', day: 'numeric', year: 'numeric',
         }),
       };
-      setPhotos(prev => [newPhoto, ...prev]);
+      updatePhotos(prev => [newPhoto, ...prev]);
     }
-  }, []);
+  }, [updatePhotos]);
+
+  const deletePhoto = useCallback((photoId: string) => {
+    Alert.alert('Delete Photo', 'Remove this catch?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          updatePhotos(prev => prev.filter(p => p.id !== photoId));
+          setSelectedPhoto(null);
+        },
+      },
+    ]);
+  }, [updatePhotos]);
+
+  const updateSpecies = useCallback((photoId: string, species: string) => {
+    updatePhotos(prev => prev.map(p => p.id === photoId ? { ...p, species } : p));
+    setSelectedPhoto(prev => prev && prev.id === photoId ? { ...prev, species } : prev);
+    setEditingSpecies(false);
+  }, [updatePhotos]);
 
   const shareToSocial = useCallback(async (photo: CatchPhoto) => {
     try {
@@ -204,6 +256,28 @@ export default function CatchesScreen() {
             <Text style={s.brandBarDate}>{selectedPhoto.date}</Text>
           </View>
 
+          {/* Species tag */}
+          <TouchableOpacity
+            style={s.speciesTag}
+            onPress={() => setEditingSpecies(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={s.speciesTagLabel}>
+              {selectedPhoto.species ? `Species: ${selectedPhoto.species}` : 'Tap to tag species'}
+            </Text>
+          </TouchableOpacity>
+          {editingSpecies && (
+            <TextInput
+              style={s.speciesInput}
+              placeholder="e.g. Redfish, Flounder..."
+              placeholderTextColor={COLORS.textMuted}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={(e) => updateSpecies(selectedPhoto.id, e.nativeEvent.text)}
+              onBlur={() => setEditingSpecies(false)}
+            />
+          )}
+
           {/* Share buttons */}
           <View style={s.shareRow}>
             <TouchableOpacity
@@ -221,6 +295,15 @@ export default function CatchesScreen() {
               <Text style={[s.shareBtnText, s.shareBtnTextAlt]}>SHARE IMAGE</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Delete */}
+          <TouchableOpacity
+            style={s.deleteBtn}
+            onPress={() => deletePhoto(selectedPhoto.id)}
+            activeOpacity={0.8}
+          >
+            <Text style={s.deleteBtnText}>DELETE PHOTO</Text>
+          </TouchableOpacity>
 
           <Text style={s.shareHint}>
             Every share includes NGN Fishing branding — spread the word!
@@ -418,6 +501,44 @@ const s = StyleSheet.create({
     color: COLORS.textMuted,
   },
 
+  speciesTag: {
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    padding: 10,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  speciesTagLabel: {
+    fontSize: 12,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    letterSpacing: 1,
+  },
+  speciesInput: {
+    backgroundColor: PANEL_BG,
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+    padding: 12,
+    color: COLORS.white,
+    fontSize: 14,
+    marginTop: 8,
+    fontFamily: MONO,
+  },
+  deleteBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    padding: 10,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  deleteBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.danger,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+  },
   shareHint: {
     fontSize: 10,
     color: COLORS.textMuted,

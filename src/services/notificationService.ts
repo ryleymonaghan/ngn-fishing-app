@@ -201,6 +201,171 @@ export async function getPendingAlerts(): Promise<number> {
   }
 }
 
+// ── Weather Alert Thresholds ────────────────
+const WEATHER_THRESHOLDS = {
+  HIGH_WIND_MPH: 20,        // Alert when sustained winds exceed this
+  GUST_WARNING_MPH: 30,     // Strong gust warning
+  LIGHTNING_KEYWORDS: ['thunderstorm', 'lightning', 'severe'],
+  HEAVY_RAIN_KEYWORDS: ['heavy rain', 'downpour'],
+  SMALL_CRAFT_WIND_MPH: 25, // Small craft advisory threshold
+} as const;
+
+export interface WeatherAlert {
+  type: 'wind' | 'lightning' | 'small_craft' | 'rain' | 'temperature_drop';
+  severity: 'warning' | 'watch' | 'advisory';
+  title: string;
+  body: string;
+  scheduledFor?: Date;
+}
+
+// ── Schedule Weather Alerts ─────────────────
+// Checks current + forecast conditions and schedules
+// alerts for dangerous weather changes.
+export async function scheduleWeatherAlerts(
+  currentWeather: {
+    windSpeed: number;
+    windCardinal: string;
+    conditions: string;
+    temp: number;
+  },
+  forecastData?: Array<{
+    dt: number;
+    windSpeed: number;
+    conditions: string;
+    temp: number;
+    pop?: number; // probability of precipitation 0-1
+  }>,
+): Promise<WeatherAlert[]> {
+  if (!Notifications) return [];
+
+  const hasPermission = await requestNotificationPermission();
+  if (!hasPermission) return [];
+
+  const alerts: WeatherAlert[] = [];
+
+  // ── Current high wind alert ──
+  if (currentWeather.windSpeed >= WEATHER_THRESHOLDS.HIGH_WIND_MPH) {
+    const severity = currentWeather.windSpeed >= WEATHER_THRESHOLDS.SMALL_CRAFT_WIND_MPH
+      ? 'warning' : 'advisory';
+    const alert: WeatherAlert = {
+      type: currentWeather.windSpeed >= WEATHER_THRESHOLDS.SMALL_CRAFT_WIND_MPH ? 'small_craft' : 'wind',
+      severity,
+      title: currentWeather.windSpeed >= WEATHER_THRESHOLDS.SMALL_CRAFT_WIND_MPH
+        ? '⚠️ Small Craft Advisory'
+        : '💨 High Wind Advisory',
+      body: `Winds ${currentWeather.windSpeed} mph ${currentWeather.windCardinal}. ${
+        severity === 'warning' ? 'Consider staying inshore or postponing.' : 'Use caution on open water.'
+      }`,
+    };
+    alerts.push(alert);
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: alert.title,
+        body: alert.body,
+        sound: 'default',
+        data: { type: 'weather_alert', alertType: alert.type },
+        ...(Platform.OS === 'android' ? { channelId: 'move-alerts' } : {}),
+      },
+      trigger: null, // immediate
+    });
+  }
+
+  // ── Current lightning/storm check ──
+  const conditionsLower = currentWeather.conditions.toLowerCase();
+  if (WEATHER_THRESHOLDS.LIGHTNING_KEYWORDS.some(k => conditionsLower.includes(k))) {
+    const alert: WeatherAlert = {
+      type: 'lightning',
+      severity: 'warning',
+      title: '⛈ Thunderstorm Warning',
+      body: 'Thunderstorms in the area. Get off the water immediately. Seek shelter.',
+    };
+    alerts.push(alert);
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: alert.title,
+        body: alert.body,
+        sound: 'default',
+        data: { type: 'weather_alert', alertType: 'lightning' },
+        ...(Platform.OS === 'android' ? { channelId: 'move-alerts' } : {}),
+      },
+      trigger: null,
+    });
+  }
+
+  // ── Forecast-based alerts (upcoming weather changes) ──
+  if (forecastData) {
+    for (const fc of forecastData) {
+      const fcTime = new Date(fc.dt * 1000);
+      if (fcTime <= new Date()) continue;
+
+      // Upcoming storm
+      const fcConditions = fc.conditions.toLowerCase();
+      if (WEATHER_THRESHOLDS.LIGHTNING_KEYWORDS.some(k => fcConditions.includes(k))) {
+        const minutesAway = Math.round((fcTime.getTime() - Date.now()) / 60000);
+        if (minutesAway > 15 && minutesAway < 360) {
+          const alertTime = new Date(fcTime.getTime() - 30 * 60 * 1000); // 30 min before
+          if (alertTime > new Date()) {
+            const alert: WeatherAlert = {
+              type: 'lightning',
+              severity: 'watch',
+              title: '⛈ Storm Approaching',
+              body: `Thunderstorms expected in ~${minutesAway} minutes. Plan your exit now.`,
+              scheduledFor: alertTime,
+            };
+            alerts.push(alert);
+
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: alert.title,
+                body: alert.body,
+                sound: 'default',
+                data: { type: 'weather_alert', alertType: 'lightning_forecast' },
+                ...(Platform.OS === 'android' ? { channelId: 'move-alerts' } : {}),
+              },
+              trigger: { type: 'date', date: alertTime },
+            });
+            break; // only one storm forecast alert
+          }
+        }
+      }
+
+      // Upcoming high wind
+      if (fc.windSpeed >= WEATHER_THRESHOLDS.HIGH_WIND_MPH && currentWeather.windSpeed < WEATHER_THRESHOLDS.HIGH_WIND_MPH) {
+        const minutesAway = Math.round((fcTime.getTime() - Date.now()) / 60000);
+        if (minutesAway > 15 && minutesAway < 360) {
+          const alertTime = new Date(fcTime.getTime() - 20 * 60 * 1000);
+          if (alertTime > new Date()) {
+            const alert: WeatherAlert = {
+              type: 'wind',
+              severity: 'watch',
+              title: '💨 Wind Increasing',
+              body: `Winds expected to reach ${fc.windSpeed} mph in ~${minutesAway} min. Consider heading in.`,
+              scheduledFor: alertTime,
+            };
+            alerts.push(alert);
+
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: alert.title,
+                body: alert.body,
+                sound: 'default',
+                data: { type: 'weather_alert', alertType: 'wind_forecast' },
+                ...(Platform.OS === 'android' ? { channelId: 'move-alerts' } : {}),
+              },
+              trigger: { type: 'date', date: alertTime },
+            });
+            break; // only one wind forecast alert
+          }
+        }
+      }
+    }
+  }
+
+  return alerts;
+}
+
 // ── Helper: parse schedule time string ──────
 // Converts "10:30 AM" + "2026-04-05" → Date
 function parseScheduleTime(timeStr: string, dateStr: string): Date | null {

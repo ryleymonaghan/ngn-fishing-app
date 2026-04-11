@@ -113,6 +113,14 @@ Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). 
 
 Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${fishingLocationLabel} and surrounding SE USA waters.
 
+CRITICAL GPS COORDINATE RULES:
+- Provide 6 to 8 GPS spots per species — NOT just one or two.
+- SPREAD spots across a 0.5–2 mile radius around each prime area so boats don't stack up on one location.
+- Each spot must have UNIQUE coordinates — no duplicates. Vary lat/lng by at least 0.002 degrees (~200 yards).
+- Include a mix of primary honey holes AND secondary/tertiary spots nearby.
+- Label spots clearly: "Spot A — Main Channel Drop", "Spot B — Oyster Bar NE Side", etc.
+- For each spot, note the best approach angle and where to anchor/position relative to the structure.
+
 IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no explanation text before or after. The JSON must match this schema exactly:
 
 {
@@ -132,21 +140,24 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
       "spots": [
         {
           "id": "unique string id",
-          "name": "real location name",
+          "name": "Spot A — descriptive location name with structure reference",
           "coordinates": { "lat": <number>, "lng": <number> },
           "depthFt": "e.g. 5–12 ft",
-          "notes": "specific anchoring, approach, and technique notes",
+          "notes": "specific anchoring, approach angle, and technique notes — mention nearby structure",
           "accessType": ["boat"],
           "arrivalTime": "e.g. 10:00 AM",
           "targetSpecies": ["species id"]
         }
       ],
       "rig": {
-        "name": "rig name",
+        "name": "rig name (e.g. Carolina Rig, Popping Cork, Fish Finder)",
         "hookSize": "e.g. #1 Aberdeen",
         "leader": "e.g. 15 lb fluorocarbon",
         "weight": "e.g. 3/8 oz jig head",
-        "baitPresentation": "how to present the bait"
+        "baitPresentation": "how to present the bait",
+        "knotName": "recommended knot name (e.g. Palomar Knot, Improved Clinch)",
+        "knotId": "knot id for deep linking (palomar, improved_clinch, uni, fg, snell, loop, albright, blood, surgeon, dropper_loop, bimini, nail, haywire, spider_hitch, bristol)",
+        "tackleList": ["item 1 with specs", "item 2 with specs", "item 3 with specs"]
       },
       "baitRecommendation": "recommended bait (live, frozen, AND artificial options) with reasoning based on conditions",
       "anchoringStrategy": "how to position the boat/self",

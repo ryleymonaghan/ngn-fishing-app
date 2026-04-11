@@ -7,9 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { COLORS, DEFAULT_LOCATION, INSHORE_SPECIES, OFFSHORE_SPECIES, APP_SLOGAN } from '@constants/index';
-import { useConditionsStore, useReportStore, useWizardStore, useAuthStore } from '@stores/index';
+import { useConditionsStore, useReportStore, useWizardStore, useAuthStore, useForecastStore } from '@stores/index';
 import type { UserLocation, TideData, SolunarData, WeatherData, BuoyData, DayForecast, WizardDraft } from '@app-types/index';
 import { generateForecastBriefing, type ForecastBriefing, type ForecastDay, type LightStatus } from '@services/forecastBriefingService';
+import { DaySelector } from '@components/forecast/DaySelector';
+import { DaySummaryCard } from '@components/forecast/DaySummaryCard';
+import { CategoryCard } from '@components/forecast/CategoryCard';
 
 // ── Location helper ──────────────────────────────
 async function getUserLocation(): Promise<UserLocation> {
@@ -327,10 +330,12 @@ export default function ConditionsScreen() {
   const { conditions, isLoading, error, fetchConditions, refresh } = useConditionsStore();
   const { generateReport, isGenerating } = useReportStore();
   const { user } = useAuthStore();
+  const { forecasts, selectedDay, fetchForecast, setSelectedDay } = useForecastStore();
   const router = useRouter();
   const [guideLoading, setGuideLoading] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
   const [briefing, setBriefing] = useState<ForecastBriefing | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['inshore']));
 
   const handleForecastPress = () => {
     if (!conditions) return;
@@ -341,7 +346,10 @@ export default function ConditionsScreen() {
   };
 
   useEffect(() => {
-    getUserLocation().then(fetchConditions);
+    getUserLocation().then((loc) => {
+      fetchConditions(loc);
+      fetchForecast(loc);
+    });
   }, []);
 
   const locationLabel = conditions?.location?.label || DEFAULT_LOCATION.label;
@@ -577,11 +585,31 @@ export default function ConditionsScreen() {
 
             <Text style={s.conditionsLabel}>{conditions.weather.conditions.toUpperCase()}</Text>
 
-            {/* ── 3-DAY FORECAST ────────────────── */}
-            {conditions.forecast && conditions.forecast.length > 0 && (
+            {/* ── 5-DAY SPECIES FORECAST ──────────── */}
+            {forecasts.length > 0 && (
               <>
-                <SectionHeader title="3-DAY FORECAST" />
-                <ForecastStrip forecast={conditions.forecast} />
+                <SectionHeader title="5-DAY SPECIES FORECAST" />
+                <DaySelector
+                  forecasts={forecasts}
+                  selectedDay={selectedDay}
+                  onSelect={setSelectedDay}
+                />
+                <DaySummaryCard day={forecasts[selectedDay]} />
+                {forecasts[selectedDay].categories.map(cat => (
+                  <CategoryCard
+                    key={cat.categoryId}
+                    category={cat}
+                    expanded={expandedCategories.has(cat.categoryId)}
+                    onToggle={() => {
+                      setExpandedCategories(prev => {
+                        const next = new Set(prev);
+                        if (next.has(cat.categoryId)) next.delete(cat.categoryId);
+                        else next.add(cat.categoryId);
+                        return next;
+                      });
+                    }}
+                  />
+                ))}
               </>
             )}
 

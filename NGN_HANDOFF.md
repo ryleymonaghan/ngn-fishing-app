@@ -1,5 +1,5 @@
 # NGN Fishing — Project Handoff
-## Updated April 5, 2026 (Session 2 — App Store Prep + Legal)
+## Updated April 6, 2026 (Session 3 — 5-Day Species Forecast + Location Picker Rewrite)
 
 ---
 
@@ -18,10 +18,18 @@
 - **Hosting:** Railway — project "genuine-flow" (auto-deploys on push to main)
 - **URL:** ngn-fishing-backend-production.up.railway.app
 - **Endpoints:**
-  - `GET /api/weather?lat=&lon=` — OpenWeather proxy
+  - `GET /api/weather?lat=&lon=` — OpenWeather current conditions proxy
+  - `GET /api/forecast?lat=&lon=&cnt=` — OpenWeather 5-day forecast proxy (cnt defaults to 24)
   - `POST /api/generate-report` — Claude API proxy
+  - `GET /api/places/autocomplete?input=&lat=&lng=` — Google Places Autocomplete proxy
+  - `GET /api/places/details?place_id=` — Google Places Details proxy (returns lat/lng)
+  - `GET /api/geocode/reverse?lat=&lng=` — Google Geocoding reverse proxy
+  - `POST /api/stripe/checkout` — Stripe Checkout session
+  - `GET /api/stripe/status?email=` — Subscription status
+  - `POST /api/stripe/webhook` — Stripe webhook handler
+  - `POST /api/stripe/portal` — Stripe billing portal
   - `GET /health` — service health check
-- **Env vars on Railway:** `OPENWEATHER_API_KEY`, `ANTHROPIC_API_KEY`
+- **Env vars on Railway:** `OPENWEATHER_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `GOOGLE_PLACES_API_KEY` (⬜ needs to be added)
 
 ### Design Decision: All API keys stay server-side on Railway
 - Web app proxies weather + report calls through the backend
@@ -50,27 +58,47 @@ ngn-fishing-app/
 │   ├── types/
 │   │   ├── index.ts        ← TypeScript interfaces
 │   │   └── uuid.d.ts       ← uuid type declaration
-│   ├── stores/index.ts     ← Zustand stores (conditions, wizard, reports, auth)
+│   ├── stores/index.ts     ← 5 Zustand stores (conditions, wizard, reports, auth, forecast)
 │   └── services/
-│       ├── conditionsService.ts  ← NOAA tides + weather + buoy + solunar
-│       └── reportService.ts     ← Claude API report generation
+│       ├── conditionsService.ts    ← NOAA tides + weather + buoy + solunar (exports shared functions)
+│       ├── reportService.ts        ← Claude API report generation
+│       ├── forecastService.ts      ← 5-day species-level catch probability scoring
+│       ├── forecastBriefingService.ts ← 72-hour Go/No-Go briefing
+│       ├── notificationService.ts  ← Push notification scheduling
+│       ├── supabaseSync.ts         ← Cloud persistence
+│       ├── stripeService.ts        ← Stripe Checkout
+│       ├── scoutService.ts         ← Pin & Scout AI structure analysis
+│       └── castTrackerService.ts   ← Cast detection via accelerometer
+│   ├── components/
+│   │   └── forecast/
+│   │       ├── DaySelector.tsx     ← 5-day pill strip
+│   │       ├── DaySummaryCard.tsx  ← Selected day overview
+│   │       ├── CategoryCard.tsx    ← Expandable accordion (Inshore/Trolling/Reef)
+│   │       ├── SpeciesRow.tsx      ← Species + probability bar
+│   │       └── ScoreBar.tsx        ← Reusable percentage bar
+│   └── lib/supabase.ts            ← Supabase client (lazy init)
 └── app/
     ├── _layout.tsx         ← Root stack navigator
+    ├── login.tsx           ← Login/signup screen
     ├── tabs/
     │   ├── _layout.tsx     ← Hamburger drawer + tab navigator (tab bar hidden)
-    │   ├── index.tsx       ← Home screen — conditions dashboard
+    │   ├── index.tsx       ← Home — 5-day species forecast + conditions + briefing
     │   ├── reports.tsx     ← Report history
-    │   ├── spots.tsx       ← GPS spot map with relief shading
-    │   ├── catches.tsx     ← Photo sharing with NGN branding + social share
+    │   ├── spots.tsx       ← GPS spot map with relief shading + Cast Plot
+    │   ├── catches.tsx     ← Photo sharing with NGN branding
+    │   ├── triplog.tsx     ← Trip log
+    │   ├── knots.tsx       ← Knot tying guide (14 knots)
+    │   ├── rigs.tsx        ← Rig assembly guide (11 rigs)
+    │   ├── shop.tsx        ← Gear shop (affiliate)
     │   └── profile.tsx     ← Subscription + boat settings
     ├── wizard/
     │   ├── _layout.tsx
-    │   ├── step1.tsx       ← Date picker (7 days) + time window + access type
+    │   ├── step1.tsx       ← Location (GPS + Google Places + map pin) + date + access
     │   ├── step2.tsx       ← Species selection (inshore/offshore toggle)
     │   └── step3.tsx       ← Bait selection + generate report
     └── report/
         ├── _layout.tsx
-        └── [id].tsx        ← Full report display + Maps navigation
+        └── [id].tsx        ← Full report display + Maps navigation + GPX export
 
 ngn-fishing-backend/
 ├── index.js                ← Express server (weather proxy + report proxy)
@@ -124,7 +152,18 @@ ngn-fishing-backend/
 - ✅ **Fishing Location Picker** — wizard step 1 now asks "Where are you fishing?" with 24 preset locations across SC, NC, GA, FL. Searchable, filterable by state. Auto-detects closest preset to phone GPS. Report uses selected location for AI prompt + re-fetches tide/weather data for that NOAA station if location differs from phone GPS by >7 miles.
 - ✅ **72-Hour Forecast Briefing** — button on home screen (front and center). Tap to open modal with personalized Go/No-Go for each day based on user's boat size, wind, waves, temp, solunar. Shows success %, target species, tide schedule, best bite windows, and reasons. Highlights best day with ★. No AI call — instant from local data.
 
+### Session 3 (April 6, 2026)
+- ✅ **5-Day Species Forecast Dashboard** — Replaced 3-day success probability strip on home screen with rich 5-day per-species catch probability system. Shows 3 expandable categories: Inshore (10 species), Offshore Trolling (5 species), Offshore Reef (3 species). Each species scored 0-100% based on 4 weighted factors: season (30%), solunar (25%), tide (25%), weather (20%). Horizontal pill strip for day selection. DaySummaryCard shows overall score + weather/tide/solunar stats.
+- ✅ **Species Seasonality Engine** — `SPECIES_SEASONALITY` constant: 18 species × 12 months activity matrix (0.0-1.0 scale). Derived from SE USA fishing knowledge. Out-of-season species show badge instead of probability bar.
+- ✅ **Forecast UI Components** — 5 new reusable components in `src/components/forecast/`: DaySelector, DaySummaryCard, CategoryCard (expandable accordion), SpeciesRow, ScoreBar.
+- ✅ **ForecastStore** — New Zustand store (`useForecastStore`) for 5-day species data. Non-persisted, refetches each session. Parallel fetch with conditions on home screen.
+- ✅ **conditionsService Exports** — `calcSolunar`, `fetchWeatherForecast`, `fetchTideForecast`, `buildDayForecasts`, `calcSuccessProbability` now exported for reuse. `fetchWeatherForecast` accepts `cnt` parameter. `buildDayForecasts` accepts `numDays` parameter. Both backward-compatible.
+- ✅ **Backend Forecast Proxy Updated** — `/api/forecast` now passes through `cnt` query parameter (defaults to 24). Supports 5-day forecasts (cnt=40).
+- ✅ **Location Picker Rewrite** — Replaced hardcoded 27-preset picker with 3 methods: (1) "Use My Location" GPS button with reverse geocoding, (2) Google Places Autocomplete search with debounced dropdown, (3) "Drop a Pin" map modal (native only, satellite view). All Google API calls proxied through backend to keep `GOOGLE_PLACES_API_KEY` server-side.
+- ✅ **Google Places Backend Proxy** — 3 new endpoints: `/api/places/autocomplete`, `/api/places/details`, `/api/geocode/reverse`. All proxy through `GOOGLE_PLACES_API_KEY` on Railway.
+
 ## What's Not Built Yet / Needs Finishing
+- ⬜ **Add `GOOGLE_PLACES_API_KEY` to Railway** — needed for location search in wizard. Get from Google Cloud Console (enable Places API + Geocoding API).
 - ⬜ Replace placeholder Stripe price IDs in `src/constants/index.ts` (currently placeholders)
 - ⬜ Replace EAS project ID in `app.config.js`
 - ⬜ Replace Apple Team ID + App Store Connect App ID in `eas.json`
@@ -136,6 +175,7 @@ ngn-fishing-backend/
 - ⬜ iOS/Android native builds (EAS Build) — config ready, needs account + icon
 - ⬜ App Store submission — metadata ready in store-metadata.json
 - ⬜ Provisional patent filing ($320) — recommended for move-timing algorithm
+- ⬜ Rig/Knot/Tackle section in generated reports + "Shop This Rig" button (was planned but not started this session)
 
 ---
 
@@ -153,13 +193,17 @@ ngn-fishing-backend/
 
 ## Key Constants
 - `FREE_REPORT_LIMIT = 3`
+- `FORECAST_DAYS = 5` (OpenWeather free tier limit; architecture supports easy upgrade to 7)
 - `PRICING.MONTHLY = $9.99` (Pro tier — reports + maps + alerts + GPX)
 - `PRICING.ANNUAL = $59.99`
 - `DEFAULT_LOCATION = Johns Island, SC (32.7488, -80.0228)`
 - `NOAA Station: 8665530 (Charleston Harbor)`
 - `Claude model: claude-sonnet-4-6`
-- `10 inshore species, 8 offshore species`
+- `REPORT_MAX_TOKENS = 8192`
+- `10 inshore species, 8 offshore species` (18 total with seasonality data)
 - `7 live baits, 6 frozen baits, 6 artificial baits`
+- `SPECIES_SEASONALITY` — 18 species × 12 months activity matrix
+- `FORECAST_CATEGORIES` — Inshore / Offshore Trolling / Offshore Reef & Bottom
 
 ---
 
@@ -170,16 +214,20 @@ ngn-fishing-backend/
 4. ~~Stripe integration~~ ✅ DONE (needs real price IDs)
 5. ~~Push notifications~~ ✅ DONE (service built, needs real device testing)
 6. ~~Supabase data persistence~~ ✅ DONE
-7. iOS/Android App Store submission — NEXT (see "What's Not Built Yet" above)
+7. ~~5-Day Species Forecast~~ ✅ DONE (Session 3)
+8. ~~Location Picker (GPS + Search + Pin Drop)~~ ✅ DONE (Session 3)
+9. Rig/Knot/Tackle in generated reports + "Shop This Rig" button — NEXT
+10. iOS/Android App Store submission (see "What's Not Built Yet" above)
 
 ## Next Session Priorities
-1. Push latest commits to GitHub (from local machine)
-2. Replace placeholder IDs (Stripe, EAS, Apple Team)
-3. Create privacy policy + terms pages on ngnfishing.com
-4. Export app icon from Canva
-5. Run `npx tsc --noEmit` to verify TypeScript
-6. Run `npx expo export --platform web --clear` to verify web build
-7. First EAS build attempt (needs Apple Dev account)
+1. **Add `GOOGLE_PLACES_API_KEY` to Railway** (Google Cloud Console → enable Places API + Geocoding API)
+2. Push latest commits to GitHub (frontend + backend repos)
+3. Rig/knot/tackle section in reports + "Shop This Rig" button
+4. Fix map navigation to use exact lat/lng coordinates (not place name string search)
+5. Replace placeholder IDs (Stripe, EAS, Apple Team)
+6. Create privacy policy + terms pages on ngnfishing.com
+7. Export app icon from Canva
+8. First EAS build attempt (needs Apple Dev account)
 
 ---
 
@@ -197,7 +245,33 @@ ngn-fishing-backend/
 
 ---
 
-## New Files Added This Session
+## New Files Added — Session 3 (April 6, 2026)
+
+| File | Purpose |
+|------|---------|
+| `src/services/forecastService.ts` | 5-day species-level catch probability scoring engine (4 weighted factors per species) |
+| `src/components/forecast/DaySelector.tsx` | Horizontal 5-day pill strip with color-coded scores |
+| `src/components/forecast/DaySummaryCard.tsx` | Selected day's overall score + weather/tide/solunar summary |
+| `src/components/forecast/CategoryCard.tsx` | Expandable accordion for Inshore/Offshore Trolling/Offshore Reef |
+| `src/components/forecast/SpeciesRow.tsx` | Species name + probability bar + percentage (out-of-season badge) |
+| `src/components/forecast/ScoreBar.tsx` | Reusable horizontal percentage bar component |
+
+## Modified Files — Session 3 (April 6, 2026)
+
+| File | Changes |
+|------|---------|
+| `src/types/index.ts` | Added `SpeciesForecast`, `CategoryForecast`, `DailyFishingForecast`, `ForecastStore`, `ForecastCategoryId` |
+| `src/constants/index.ts` | Added `FORECAST_DAYS`, `SPECIES_SEASONALITY` (18 species × 12 months), `FORECAST_CATEGORIES` (3 groups) |
+| `src/services/conditionsService.ts` | Exported `calcSolunar`, `fetchWeatherForecast` (+ cnt param), `fetchTideForecast`, `buildDayForecasts` (+ numDays param), `calcSuccessProbability` |
+| `src/stores/index.ts` | Added `useForecastStore` (non-persisted Zustand store) |
+| `app/tabs/index.tsx` | Replaced 3-day ForecastStrip with 5-day species forecast (DaySelector + DaySummaryCard + CategoryCards) |
+| `app/wizard/step1.tsx` | **Full rewrite** — Location picker: GPS + Google Places search + map pin drop. Removed hardcoded preset picker. |
+| `ngn-fishing-backend/index.js` | Added `/api/places/autocomplete`, `/api/places/details`, `/api/geocode/reverse` endpoints. Updated `/api/forecast` to pass `cnt` param. |
+| `CLAUDE.md` | Updated with full architecture diagram, env vars, store docs, path aliases |
+
+---
+
+## New Files Added — Session 2 (April 5, 2026)
 
 | File | Purpose |
 |------|---------|

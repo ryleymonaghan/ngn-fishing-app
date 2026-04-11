@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import {
@@ -10,6 +10,31 @@ import {
 } from '@constants/index';
 import { useAuthStore, useReportStore } from '@stores/index';
 import { startCheckout, openCustomerPortal } from '@services/stripeService';
+import { requestNotificationPermission, configureNotifications, getPendingAlerts } from '@services/notificationService';
+
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
+
+// ── Community / Social Links ──────────────────
+const COMMUNITY_LINKS = [
+  {
+    label: 'NGN Facebook Group',
+    sub: 'Join the community — share catches, spots, tips',
+    url: 'https://www.facebook.com/groups/ngnfishing',
+    icon: 'FB',
+  },
+  {
+    label: 'Instagram @ngnfishing',
+    sub: 'Follow for daily reports + species intel',
+    url: 'https://www.instagram.com/ngnfishing',
+    icon: 'IG',
+  },
+  {
+    label: 'NGN Fishing Website',
+    sub: 'ngnfishing.com — reports, maps, forecast',
+    url: 'https://ngnfishing.com',
+    icon: 'WEB',
+  },
+] as const;
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuthStore();
@@ -163,6 +188,53 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Notification Settings */}
+        <View style={s.card}>
+          <Text style={s.cardLabel}>NOTIFICATIONS</Text>
+          <TouchableOpacity
+            style={s.notifBtn}
+            onPress={async () => {
+              const granted = await requestNotificationPermission();
+              if (granted) {
+                await configureNotifications();
+                const pending = await getPendingAlerts();
+                Alert.alert('Notifications Active', `Push notifications enabled. ${pending} alerts currently scheduled.`);
+              } else {
+                Alert.alert('Permission Denied', 'Enable notifications in your device settings to receive move-timing alerts and weather warnings.');
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={s.notifBtnText}>Enable Push Notifications</Text>
+            <Text style={s.notifBtnSub}>Move alerts, tide changes, weather warnings</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Community */}
+        <View style={s.card}>
+          <Text style={s.cardLabel}>COMMUNITY</Text>
+          <Text style={s.communityIntro}>
+            Join the NGN crew — share catches, swap intel, get better.
+          </Text>
+          {COMMUNITY_LINKS.map((link) => (
+            <TouchableOpacity
+              key={link.url}
+              style={s.communityLink}
+              onPress={() => Linking.openURL(link.url)}
+              activeOpacity={0.8}
+            >
+              <View style={s.communityIcon}>
+                <Text style={s.communityIconText}>{link.icon}</Text>
+              </View>
+              <View style={s.communityInfo}>
+                <Text style={s.communityLabel}>{link.label}</Text>
+                <Text style={s.communitySub}>{link.sub}</Text>
+              </View>
+              <Text style={s.communityArrow}>→</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Version */}
         <Text style={s.version}>NGN Fishing v0.1.0 · ngnfishing.com</Text>
 
@@ -229,5 +301,42 @@ const s = StyleSheet.create({
   },
   signOutText:        { color: COLORS.danger, fontWeight: '600', fontSize: 14 },
   anonText:           { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
+
+  // Notification settings
+  notifBtn: {
+    backgroundColor: COLORS.navy,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.seafoam,
+  },
+  notifBtnText:       { fontSize: 14, fontWeight: '600', color: COLORS.seafoam },
+  notifBtnSub:        { fontSize: 11, color: COLORS.textMuted, marginTop: 3 },
+
+  // Community section
+  communityIntro:     { fontSize: 13, color: COLORS.textSecondary, marginBottom: 14, lineHeight: 20 },
+  communityLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.navy,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  communityIcon: {
+    width: 36,
+    height: 36,
+    backgroundColor: `${COLORS.seafoam}20`,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  communityIconText:  { fontSize: 11, fontWeight: '800', color: COLORS.seafoam, fontFamily: MONO, letterSpacing: 1 },
+  communityInfo:      { flex: 1 },
+  communityLabel:     { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  communitySub:       { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  communityArrow:     { fontSize: 16, color: COLORS.textMuted, paddingLeft: 8 },
+
   version:            { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginTop: 8 },
 });

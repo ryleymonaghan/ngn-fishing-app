@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
 import { useReportStore } from '@stores/index';
 import { scheduleMoveAlerts, configureNotifications } from '@services/notificationService';
-import type { FishingReport, SpeciesSection, ScheduleEntry } from '@app-types/index';
+import type { FishingReport, SpeciesSection, ScheduleEntry, RigRecommendation } from '@app-types/index';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 
@@ -86,10 +86,23 @@ export default function ReportScreen() {
   }
 
   const openMaps = (lat: number, lng: number, name: string) => {
-    const url = `maps://?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`;
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);
-    });
+    if (Platform.OS === 'ios') {
+      // Apple Maps: use ll= for exact coordinates, q= for pin label
+      const url = `maps://0,0?ll=${lat},${lng}&q=${encodeURIComponent(name)}`;
+      Linking.openURL(url).catch(() => {
+        // Fallback to Google Maps web with exact coordinates
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+      });
+    } else {
+      // Android / Web: Google Maps with exact lat/lng coordinates
+      const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      Linking.openURL(url);
+    }
+  };
+
+  const openAmazonSearch = (query: string) => {
+    const url = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=ngnfishing-20`;
+    Linking.openURL(url);
   };
 
   return (
@@ -122,7 +135,7 @@ export default function ReportScreen() {
 
         {/* Species Sections */}
         {report.species.map((sp) => (
-          <SpeciesCard key={sp.speciesId} species={sp} onNavigate={openMaps} />
+          <SpeciesCard key={sp.speciesId} species={sp} onNavigate={openMaps} onShopRig={openAmazonSearch} />
         ))}
 
         {/* Full Day Schedule */}
@@ -273,9 +286,11 @@ export default function ReportScreen() {
 function SpeciesCard({
   species,
   onNavigate,
+  onShopRig,
 }: {
   species: SpeciesSection;
   onNavigate: (lat: number, lng: number, name: string) => void;
+  onShopRig: (query: string) => void;
 }) {
   return (
     <View style={s.speciesCard}>
@@ -283,8 +298,22 @@ function SpeciesCard({
       <Text style={s.biteWindow}>Bite window: {species.biteWindow}</Text>
       <Text style={s.bodyText}>{species.biteWindowReasoning}</Text>
 
-      {/* Spots */}
-      {species.spots.map((spot) => (
+      {/* Spots with coordinates + navigation */}
+      {species.spots.length > 1 && (
+        <TouchableOpacity
+          style={s.routeAllBtn}
+          onPress={() => {
+            // Open first spot — user navigates sequentially
+            const first = species.spots[0];
+            if (first) onNavigate(first.coordinates.lat, first.coordinates.lng, first.name);
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={s.routeAllText}>NAVIGATE ALL {species.spots.length} SPOTS →</Text>
+          <Text style={s.routeAllSub}>Opens GPS to first spot. Tap next spot when ready.</Text>
+        </TouchableOpacity>
+      )}
+      {species.spots.map((spot, spotIdx) => (
         <TouchableOpacity
           key={spot.id}
           style={s.spotRow}
@@ -292,24 +321,69 @@ function SpeciesCard({
           activeOpacity={0.75}
         >
           <View style={s.spotInfo}>
-            <Text style={s.spotName}>{spot.name}</Text>
-            {spot.depthFt && <Text style={s.spotDepth}>{spot.depthFt}</Text>}
+            <View style={s.spotHeader}>
+              <Text style={s.spotIndex}>{spotIdx + 1}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.spotName}>{spot.name}</Text>
+                <Text style={s.spotCoords}>
+                  {spot.coordinates.lat.toFixed(4)}°N, {Math.abs(spot.coordinates.lng).toFixed(4)}°W
+                </Text>
+              </View>
+            </View>
+            {spot.depthFt && <Text style={s.spotDepth}>Depth: {spot.depthFt}</Text>}
             <Text style={s.spotNotes}>{spot.notes}</Text>
             {spot.arrivalTime && (
               <Text style={s.arrivalTime}>Arrive by {spot.arrivalTime}</Text>
             )}
           </View>
-          <Text style={s.navIcon}>→ Maps</Text>
+          <Text style={s.navIcon}>Navigate →</Text>
         </TouchableOpacity>
       ))}
 
-      {/* Rig */}
+      {/* Rig + Knot + Tackle */}
       <View style={s.rigBox}>
-        <Text style={s.rigTitle}>Rig: {species.rig.name}</Text>
+        <Text style={s.rigSectionHeader}>RIG</Text>
+        <Text style={s.rigTitle}>{species.rig.name}</Text>
         {species.rig.hookSize && <Text style={s.rigDetail}>Hook: {species.rig.hookSize}</Text>}
         {species.rig.leader   && <Text style={s.rigDetail}>Leader: {species.rig.leader}</Text>}
         {species.rig.weight   && <Text style={s.rigDetail}>Weight: {species.rig.weight}</Text>}
         <Text style={s.rigDetail}>Presentation: {species.rig.baitPresentation}</Text>
+
+        {/* Knot */}
+        {species.rig.knotName && (
+          <View style={s.knotRow}>
+            <Text style={s.rigSectionHeader}>KNOT</Text>
+            <Text style={s.knotName}>{species.rig.knotName}</Text>
+          </View>
+        )}
+
+        {/* Tackle List */}
+        {species.rig.tackleList && species.rig.tackleList.length > 0 && (
+          <View style={s.tackleSection}>
+            <Text style={s.rigSectionHeader}>TACKLE LIST</Text>
+            {species.rig.tackleList.map((item, i) => (
+              <Text key={i} style={s.tackleItem}>• {item}</Text>
+            ))}
+          </View>
+        )}
+
+        {/* Shop This Rig */}
+        <TouchableOpacity
+          style={s.shopBtn}
+          onPress={() => {
+            const query = `${species.rig.name} fishing rig tackle`;
+            onShopRig(query);
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={s.shopBtnText}>Shop This Rig →</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bait */}
+      <View style={s.baitBox}>
+        <Text style={s.baitBoxTitle}>Bait</Text>
+        <Text style={s.bodyText}>{species.baitRecommendation}</Text>
       </View>
 
       <Text style={s.proTip}>💡 {species.proTip}</Text>
@@ -376,6 +450,17 @@ const s = StyleSheet.create({
   speciesTitle:    { fontSize: 20, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
   biteWindow:      { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', marginBottom: 6 },
 
+  routeAllBtn: {
+    backgroundColor: `${COLORS.seafoam}15`,
+    borderWidth:     1,
+    borderColor:     COLORS.seafoam,
+    borderRadius:    10,
+    padding:         12,
+    marginTop:       12,
+    alignItems:      'center',
+  },
+  routeAllText:    { fontSize: 12, fontWeight: '800', color: COLORS.seafoam, letterSpacing: 1.5 },
+  routeAllSub:     { fontSize: 10, color: COLORS.textMuted, marginTop: 3 },
   spotRow: {
     flexDirection:   'row',
     alignItems:      'center',
@@ -385,20 +470,70 @@ const s = StyleSheet.create({
     marginTop:       10,
   },
   spotInfo:        { flex: 1 },
+  spotHeader:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  spotIndex: {
+    fontSize: 16, fontWeight: '800', color: COLORS.seafoam,
+    width: 24, height: 24, textAlign: 'center', lineHeight: 24,
+    backgroundColor: `${COLORS.seafoam}20`, borderRadius: 12, overflow: 'hidden',
+  },
   spotName:        { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  spotDepth:       { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-  spotNotes:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
-  arrivalTime:     { fontSize: 11, color: COLORS.seafoam, marginTop: 4, fontWeight: '600' },
+  spotCoords:      { fontSize: 10, color: COLORS.textMuted, fontFamily: MONO, marginTop: 2, letterSpacing: 0.5 },
+  spotDepth:       { fontSize: 12, color: COLORS.textMuted, marginTop: 4, marginLeft: 34 },
+  spotNotes:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 3, marginLeft: 34 },
+  arrivalTime:     { fontSize: 11, color: COLORS.seafoam, marginTop: 4, fontWeight: '600', marginLeft: 34 },
   navIcon:         { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', paddingLeft: 8 },
 
   rigBox: {
     backgroundColor: `${COLORS.ocean}30`,
-    borderRadius:    8,
-    padding:         12,
+    borderRadius:    10,
+    padding:         14,
     marginTop:       12,
   },
-  rigTitle:        { fontSize: 13, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
+  rigSectionHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  rigTitle:        { fontSize: 15, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
   rigDetail:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+
+  knotRow: {
+    marginTop: 4,
+  },
+  knotName:        { fontSize: 14, fontWeight: '600', color: COLORS.seafoam },
+
+  tackleSection: {
+    marginTop: 4,
+  },
+  tackleItem:      { fontSize: 12, color: COLORS.textSecondary, marginTop: 3, paddingLeft: 4 },
+
+  shopBtn: {
+    backgroundColor: COLORS.seafoam,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  shopBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.navy,
+    letterSpacing: 0.5,
+  },
+
+  baitBox: {
+    backgroundColor: `${COLORS.navy}80`,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.seafoam,
+  },
+  baitBoxTitle:    { fontSize: 12, fontWeight: '700', color: COLORS.seafoam, marginBottom: 4, letterSpacing: 1 },
 
   proTip:          { fontSize: 13, color: COLORS.sky, marginTop: 10, lineHeight: 20 },
   regsText:        { fontSize: 11, color: COLORS.textMuted, marginTop: 8 },

@@ -171,7 +171,7 @@ export async function fetchBuoyData(buoyId: string): Promise<BuoyData | null> {
 }
 
 // ── Solunar Calculator (simplified) ──────────
-function calcSolunar(date: Date, lat: number): { rating: number; majors: string[]; minors: string[] } {
+export function calcSolunar(date: Date, lat: number): { rating: number; majors: string[]; minors: string[] } {
   // Simplified solunar table based on moon transit times
   // In production: replace with a proper solunar library
   const dayOfYear = Math.floor(
@@ -191,10 +191,10 @@ function calcSolunar(date: Date, lat: number): { rating: number; majors: string[
 }
 
 // ── Fetch 3-Day Weather Forecast ─────────────────
-async function fetchWeatherForecast(lat: number, lng: number): Promise<any[]> {
+export async function fetchWeatherForecast(lat: number, lng: number, cnt: number = 24): Promise<any[]> {
   let res: Response;
   if (Platform.OS === 'web') {
-    res = await fetch(`${BACKEND_URL}/api/forecast?lat=${lat}&lon=${lng}`);
+    res = await fetch(`${BACKEND_URL}/api/forecast?lat=${lat}&lon=${lng}&cnt=${cnt}`);
     if (!res.ok) return [];
   } else {
     const params = new URLSearchParams({
@@ -202,7 +202,7 @@ async function fetchWeatherForecast(lat: number, lng: number): Promise<any[]> {
       lon:   lng.toString(),
       appid: API_KEYS.OPENWEATHER,
       units: 'imperial',
-      cnt:   '24', // 8 per day × 3 days
+      cnt:   cnt.toString(),
     });
     res = await fetch(`${API_ENDPOINTS.OPENWEATHER}/forecast?${params}`);
   }
@@ -212,7 +212,7 @@ async function fetchWeatherForecast(lat: number, lng: number): Promise<any[]> {
 }
 
 // ── Fetch 3-Day NOAA Tide Predictions ────────────
-async function fetchTideForecast(stationId: string, days: number): Promise<TideReading[]> {
+export async function fetchTideForecast(stationId: string, days: number): Promise<TideReading[]> {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
   const endDate = new Date(today);
@@ -244,7 +244,7 @@ async function fetchTideForecast(stationId: string, days: number): Promise<TideR
 
 // ── Success Probability Algorithm ────────────────
 // Factors: solunar, tide movement, wind, rain, pressure proxy
-function calcSuccessProbability(
+export function calcSuccessProbability(
   solunar: SolunarData,
   tideEvents: TideReading[],
   windSpeed: number,
@@ -280,15 +280,16 @@ function calcSuccessProbability(
 }
 
 // ── Build 3-Day Forecast ─────────────────────────
-function buildDayForecasts(
+export function buildDayForecasts(
   weatherForecast: any[],
   tideReadings: TideReading[],
   lat: number,
+  numDays: number = 3,
 ): DayForecast[] {
   const days: DayForecast[] = [];
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < numDays; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().slice(0, 10);
