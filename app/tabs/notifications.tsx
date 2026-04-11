@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert,
+  Modal, TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -59,7 +60,28 @@ export default function NotificationsScreen() {
     // TODO: pass coords to map via store or params
   }, [router]);
 
-  const handlePostPin = useCallback(async () => {
+  // ── Drop Pin modal state ──
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinText, setPinText] = useState('');
+
+  const QUICK_TAGS = [
+    'Menhaden here',
+    'Spanish mackerel hitting surface',
+    'School of reds',
+    'Tarpon sighted',
+    'Bait ball',
+    'Birds working',
+    'Dolphins pushing bait',
+    'Flounder on the bottom',
+    'Shrimp running',
+    'Cobia cruising',
+  ];
+
+  const submitPin = useCallback(async () => {
+    if (!pinText.trim()) {
+      Alert.alert('Add a note', 'Describe what you are seeing before dropping a pin.');
+      return;
+    }
     try {
       const Location = require('expo-location');
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -68,16 +90,18 @@ export default function NotificationsScreen() {
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setShowPinModal(false);
       Alert.alert(
         'Pin Dropped',
-        `Shared your position (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}) with Pro Anglers in your area.`,
+        `"${pinText.trim()}" shared at (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}) with Pro Anglers in your area.`,
         [{ text: 'OK' }],
       );
-      // TODO: push pin to community feed via Supabase realtime
+      setPinText('');
+      // TODO: push pin + text to community feed via Supabase realtime
     } catch {
       Alert.alert('Error', 'Could not get your location. Try again.');
     }
-  }, []);
+  }, [pinText]);
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -161,17 +185,70 @@ export default function NotificationsScreen() {
 
         {/* ── POST A PIN ── */}
         <View style={s.divider} />
-        <TouchableOpacity style={s.postPinBtn} onPress={handlePostPin} activeOpacity={0.85}>
+        <TouchableOpacity style={s.postPinBtn} onPress={() => setShowPinModal(true)} activeOpacity={0.85}>
           <Text style={s.postPinIcon}>◉</Text>
           <View style={s.postPinTextWrap}>
             <Text style={s.postPinTitle}>DROP A PIN</Text>
-            <Text style={s.postPinSub}>Share your location with fellow Pro Anglers</Text>
+            <Text style={s.postPinSub}>Share what you're seeing with fellow Pro Anglers</Text>
           </View>
           <Text style={s.postPinArrow}>→</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* ── Drop Pin Modal ── */}
+      <Modal visible={showPinModal} animationType="slide" transparent onRequestClose={() => setShowPinModal(false)}>
+        <KeyboardAvoidingView style={s.pinModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={s.pinModalContent}>
+            {/* Header */}
+            <View style={s.pinModalHeader}>
+              <Text style={s.pinModalTitle}>DROP A PIN</Text>
+              <TouchableOpacity onPress={() => { setShowPinModal(false); setPinText(''); }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Text style={s.pinModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.pinModalLabel}>What are you seeing?</Text>
+
+            {/* Text input */}
+            <TextInput
+              style={s.pinInput}
+              value={pinText}
+              onChangeText={setPinText}
+              placeholder="e.g. Menhaden here, birds working..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              maxLength={140}
+              autoFocus
+            />
+
+            {/* Quick-pick tags */}
+            <Text style={s.pinTagLabel}>QUICK TAGS</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pinTagRow}>
+              {QUICK_TAGS.map(tag => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[s.pinTag, pinText === tag && s.pinTagActive]}
+                  onPress={() => setPinText(tag)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.pinTagText, pinText === tag && s.pinTagTextActive]}>{tag}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Submit */}
+            <TouchableOpacity
+              style={[s.pinSubmitBtn, !pinText.trim() && s.pinSubmitDisabled]}
+              onPress={submitPin}
+              activeOpacity={0.85}
+            >
+              <Text style={s.pinSubmitText}>DROP PIN</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -339,5 +416,100 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#FFF',
     marginLeft: 8,
+  },
+
+  // ── Pin Modal ──
+  pinModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  pinModalContent: {
+    backgroundColor: COLORS.navy,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  pinModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pinModalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: COLORS.white,
+    fontFamily: MONO,
+    letterSpacing: 2,
+  },
+  pinModalClose: {
+    fontSize: 20,
+    color: COLORS.textMuted,
+  },
+  pinModalLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 10,
+  },
+  pinInput: {
+    backgroundColor: '#0D2B4A',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    color: COLORS.white,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    marginBottom: 14,
+  },
+  pinTagLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  pinTagRow: {
+    gap: 8,
+    paddingBottom: 16,
+  },
+  pinTag: {
+    backgroundColor: '#0D2B4A',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  pinTagActive: {
+    borderColor: COLORS.seafoam,
+    backgroundColor: `${COLORS.seafoam}15`,
+  },
+  pinTagText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  pinTagTextActive: {
+    color: COLORS.seafoam,
+    fontWeight: '600',
+  },
+  pinSubmitBtn: {
+    backgroundColor: '#E63946',
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  pinSubmitDisabled: {
+    opacity: 0.4,
+  },
+  pinSubmitText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFF',
+    fontFamily: MONO,
+    letterSpacing: 2,
   },
 });
