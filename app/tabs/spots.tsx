@@ -41,8 +41,10 @@ if (Platform.OS !== 'web') {
 
 // ── Tile Layer URLs ──────────────────────────────
 // All tiles cached for 3 days (259200s) on device, refreshed in background
-// NOAA Nautical Charts: depth soundings, contour lines, channels (the real depth data)
-const NOAA_CHART_TILE_URL = 'https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png';
+//
+// NOAA Chart Display Service (NCDS) — replaced the old tileservice.charts.noaa.gov (shut down 2021)
+// Shows: depth soundings, contour lines, channels, markers, bottom type — the real depth data
+const NOAA_CHART_TILE_URL = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/tile/{z}/{y}/{x}';
 // ESRI Ocean Base: blue bathymetric gradient shading of ocean floor
 const ESRI_OCEAN_BASE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
 // ESRI Ocean Reference: place names, ocean features, reef labels
@@ -62,12 +64,12 @@ interface MapLayer {
 }
 
 const MAP_LAYERS: MapLayer[] = [
-  { id: 'satellite',  label: 'Satellite',            shortLabel: 'SAT',    description: 'Standard satellite imagery',                                anglerOnly: false },
-  { id: 'ocean',      label: 'Ocean Relief',         shortLabel: 'RELIEF', description: 'Blue bathymetric shading — see the ocean floor gradient',    anglerOnly: true  },
-  { id: 'depthchart', label: 'NOAA Depth Chart',     shortLabel: 'DEPTH',  description: 'Depth soundings, contour lines, channels — the real data',   anglerOnly: true  },
-  { id: 'nautical',   label: 'Nautical Chart',       shortLabel: 'CHART',  description: 'Full NOAA nautical chart overlay',                           anglerOnly: true  },
-  { id: 'seamarks',   label: 'Sea Marks',            shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                         anglerOnly: true  },
-  { id: 'labels',     label: 'Ocean Labels',         shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',                    anglerOnly: true  },
+  { id: 'satellite',  label: 'Satellite',            shortLabel: 'SAT',    description: 'Standard satellite imagery',                                      anglerOnly: false },
+  { id: 'ocean',      label: 'Ocean Relief',         shortLabel: 'RELIEF', description: 'ESRI bathymetric shading — blue depth gradient of ocean floor',    anglerOnly: true  },
+  { id: 'depthchart', label: 'NOAA Depth Chart',     shortLabel: 'DEPTH',  description: 'NOAA chart — depth soundings, contour lines, channels, bottom',   anglerOnly: true  },
+  { id: 'nautical',   label: 'Chart Overlay',        shortLabel: 'CHART',  description: 'NOAA chart at lower opacity — use as reference over satellite',    anglerOnly: true  },
+  { id: 'seamarks',   label: 'Sea Marks',            shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                              anglerOnly: true  },
+  { id: 'labels',     label: 'Ocean Labels',         shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',                         anglerOnly: true  },
 ];
 
 type BaseMap = 'satellite' | 'ocean';
@@ -417,11 +419,12 @@ export default function SpotsScreen() {
           />
         )}
 
-        {/* NOAA Depth Chart — actual depth soundings, contour lines, channels */}
+        {/* NOAA Chart Display Service — depth soundings, contour lines, channels */}
+        {/* DEPTH toggle: shows NOAA chart at high opacity over the base map */}
         {showDepthChart && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 16 : 12}
+            maximumZ={isAnglerTier ? 18 : 13}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
             tileCachePath="noaa_depth"
@@ -432,13 +435,13 @@ export default function SpotsScreen() {
           />
         )}
 
-        {/* NOAA Nautical Chart overlay — full chart with all annotations */}
-        {showNautical && UrlTile && (
+        {/* CHART toggle: same NOAA chart but lower opacity as reference overlay */}
+        {showNautical && !showDepthChart && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 16 : 12}
+            maximumZ={isAnglerTier ? 18 : 13}
             tileSize={256}
-            opacity={isAnglerTier ? 0.75 : 0.4}
+            opacity={isAnglerTier ? 0.6 : 0.35}
             tileCachePath="noaa_chart"
             tileCacheMaxAge={259200}
             offlineMode={false}
