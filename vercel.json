@@ -3,7 +3,7 @@
   "outputDirectory": "dist",
   "framework": null,
   "functions": {
-    "api/**/*.js": { "runtime": "@vercel/node@3" }
+    "api/**/*.js": { "maxDuration": 30 }
   },
   "redirects": [
     { "source": "/", "destination": "/login", "permanent": false }
