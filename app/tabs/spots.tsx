@@ -709,6 +709,34 @@ export default function SpotsScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* ── My Location (crosshairs) Button ── */}
+      <TouchableOpacity
+        style={s.myLocationBtn}
+        onPress={async () => {
+          try {
+            const Location = require('expo-location');
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Location Required', 'Enable location services to center on your position.');
+              return;
+            }
+            const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+            mapRef.current?.animateToRegion({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            }, 600);
+          } catch {
+            Alert.alert('GPS Error', 'Could not get your location. Try again.');
+          }
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={s.myLocationIcon}>⊕</Text>
+        <Text style={s.myLocationText}>MY LOC</Text>
+      </TouchableOpacity>
+
       {/* ── Cast Guide Compass Card ────────── */}
       {castGuide?.isActive && (
         <View style={s.castGuideCard}>
@@ -1364,6 +1392,31 @@ const s = StyleSheet.create({
   },
   dropPinTextActive: {
     color: COLORS.warning,
+  },
+  // ── My Location button ──
+  myLocationBtn: {
+    position: 'absolute',
+    top: 140,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    gap: 5,
+  },
+  myLocationIcon: {
+    fontSize: 14,
+    color: COLORS.seafoam,
+  },
+  myLocationText: {
+    fontSize: 9,
+    color: COLORS.seafoam,
+    fontFamily: MONO,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
 
   // ── Waypoint Nav Compass Card ─────────
