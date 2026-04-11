@@ -8,10 +8,12 @@ import { Platform, Linking } from 'react-native';
 import { STRIPE_PRODUCTS } from '@constants/index';
 
 // ── Backend URL ──────────────────────────────
+// Vercel serverless functions live at /api/stripe/*
+// Web: same-origin (relative). Mobile: full Vercel URL.
 const BACKEND =
   Platform.OS === 'web'
     ? '' // web uses relative proxy or same-origin
-    : 'https://ngn-fishing-backend-production.up.railway.app';
+    : 'https://ngnfishing.com';
 
 const API = `${BACKEND}/api/stripe`;
 
