@@ -45,12 +45,14 @@ const ESRI_OCEAN_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/service
 const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}';
 const OPENSEAMAP_TILE_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
 
-// ── WMS Tile URLs (bathymetry — from OpenTopography research) ──
-// WMSTile from react-native-maps replaces {minX},{minY},{maxX},{maxY},{width},{height}
-// GMRT: Multi-resolution ocean floor from multibeam sonar surveys (ledges, holes, drop-offs)
-const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:900913&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
-// GEBCO: Global bathymetric grid — shaded relief of ocean floor
-const GEBCO_WMS_URL = 'https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&layers=gebco_latest_2&styles=&format=image/png&transparent=false&srs=EPSG:900913&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
+// ── Bathymetry / Relief Tile URLs ──────────────────
+// Using XYZ tile services (much more reliable than WMS on mobile)
+// GEBCO: Global ocean floor shaded relief — free, no API key
+const GEBCO_TILE_URL = 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/GEBCO_basemap_NCEI/MapServer/tile/{z}/{y}/{x}';
+// ESRI Ocean Basemap: Detailed ocean floor with bathymetric tints
+const ESRI_OCEAN_BATHY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+// GMRT WMS fallback for ultra-detail (ledges, holes, drop-offs at high zoom)
+const GMRT_WMS_URL = 'https://www.gmrt.org/services/mapserver/wms_merc?service=WMS&version=1.1.1&request=GetMap&layers=GMRT&styles=&format=image/png&transparent=true&srs=EPSG:3857&bbox={minX},{minY},{maxX},{maxY}&width={width}&height={height}';
 
 // ── Layer definitions ────────────────────────────
 // anglerOnly = true → requires Pro Angler tier ($19.99/mo)
@@ -403,25 +405,33 @@ export default function SpotsScreen() {
         loadingIndicatorColor={COLORS.seafoam}
         loadingBackgroundColor={COLORS.navy}
       >
-        {/* GEBCO Global Bathymetry — ocean floor shaded relief from sonar data */}
-        {baseMap === 'ocean' && WMSTile && (
-          <WMSTile
-            urlTemplate={GEBCO_WMS_URL}
+        {/* GEBCO/ESRI Ocean Bathymetry — ocean floor shaded relief */}
+        {baseMap === 'ocean' && UrlTile && (
+          <UrlTile
+            urlTemplate={GEBCO_TILE_URL}
             maximumZ={isAnglerTier ? 13 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 1 : 0.6}
             shouldReplaceMapContent={true}
+            tileCachePath="gebco_bathy"
+            tileCacheMaxAge={604800}
+            offlineMode={false}
+            flipY={false}
             zIndex={1}
           />
         )}
 
         {/* GMRT Multibeam Sonar — high-res seafloor detail (ledges, holes, drop-offs) */}
-        {showDepthChart && WMSTile && (
-          <WMSTile
-            urlTemplate={GMRT_WMS_URL}
+        {showDepthChart && UrlTile && (
+          <UrlTile
+            urlTemplate={ESRI_OCEAN_BATHY_URL}
             maximumZ={isAnglerTier ? 14 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.85 : 0.4}
+            tileCachePath="esri_ocean_depth"
+            tileCacheMaxAge={604800}
+            offlineMode={false}
+            flipY={false}
             zIndex={2}
           />
         )}
