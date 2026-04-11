@@ -138,20 +138,23 @@ export async function fetchBuoyData(buoyId: string): Promise<BuoyData | null> {
     if (!headerLine || dataLines.length < 1) return null;
 
     const headers = headerLine.replace(/^#\s*/, '').trim().split(/\s+/);
-    const values  = dataLines[0].trim().split(/\s+/);
-    const get = (key: string) => {
+
+    // NDBC often has 'MM' (missing measurement) in the most recent rows.
+    // Search up to 10 recent rows to find valid data for each field.
+    const getFromRows = (key: string): number => {
       const idx = headers.indexOf(key);
       if (idx === -1) return NaN;
-      const val = values[idx];
-      // NDBC uses 'MM' for missing measurements
-      if (!val || val === 'MM') return NaN;
-      return parseFloat(val);
+      for (let i = 0; i < Math.min(dataLines.length, 10); i++) {
+        const val = dataLines[i].trim().split(/\s+/)[idx];
+        if (val && val !== 'MM') return parseFloat(val);
+      }
+      return NaN;
     };
 
-    const waveHeightM = get('WVHT');
-    const waterTempC  = get('WTMP');
-    const windSpeedMs = get('WSPD');
-    const domPeriod   = get('DPD');
+    const waveHeightM = getFromRows('WVHT');
+    const waterTempC  = getFromRows('WTMP');
+    const windSpeedMs = getFromRows('WSPD');
+    const domPeriod   = getFromRows('DPD');
 
     return {
       stationId:      buoyId,

@@ -1,47 +1,308 @@
 // ─────────────────────────────────────────────
 // NGN Fishing — Shop / Gear Catalog
-// Affiliate commerce — contextual gear recommendations.
-// Every product links to a partner retailer via affiliate tracking.
+// Two revenue streams:
+//   1. NGN Merch — print-on-demand via Printful (hats, shirts, buffs, decals)
+//   2. Affiliate Tackle — contextual gear recommendations linked to partners
 // ─────────────────────────────────────────────
 
+// ── NGN Merch (Print-on-Demand) ─────────────
+// These link to a Printful-powered storefront.
+// REPLACE storefront URL once Printful store is live.
+export const NGN_MERCH_STORE_URL = 'https://ngnfishing.com/shop'; // TODO: replace with Printful storefront URL
+
+export type MerchSeason = 'spring' | 'summer' | 'fall' | 'winter' | 'year_round';
+
+export interface MerchItem {
+  id: string;
+  name: string;
+  type: 'trucker_hat' | 'wide_brim' | 'bamboo_ls' | 'bamboo_ss' | 'bamboo_hoodie' | 'bamboo_gaiter' | 'decal' | 'koozie';
+  priceDisplay: string;
+  description: string;
+  material?: string;
+  colors?: string[];
+  season: MerchSeason;
+  genderFit?: 'mens' | 'womens' | 'unisex';
+  url: string;
+}
+
+// ── Seasonal Collections ────────────────────
+// Bamboo fabric: UPF 50+, antimicrobial, moisture-wicking, 4-way stretch.
+// Inspired by Freefly Apparel patterns — tonal prints, earthy coastal palette.
+// Seasonal drops keep the store fresh and create urgency.
+
+export const NGN_MERCH: MerchItem[] = [
+  // ── HATS ──────────────────────────────
+  {
+    id: 'ngn_trucker_navy',
+    name: 'NGN Trucker — Navy',
+    type: 'trucker_hat',
+    priceDisplay: '$32',
+    description: 'Richardson 112 structured snapback. Embroidered NGN logo front, "No Guide Needed" side hit. Mesh back for airflow.',
+    material: 'Cotton twill / poly mesh',
+    colors: ['Navy/Seafoam', 'Navy/White', 'Charcoal/Seafoam'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-trucker-navy`,
+  },
+  {
+    id: 'ngn_trucker_camo',
+    name: 'NGN Trucker — Marsh Camo',
+    type: 'trucker_hat',
+    priceDisplay: '$34',
+    description: 'Tonal marsh grass camo front panel. Rubber NGN patch. The dock bar hat.',
+    material: 'Cotton twill / poly mesh',
+    colors: ['Marsh Camo/Tan', 'Marsh Camo/Black'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-trucker-camo`,
+  },
+  {
+    id: 'ngn_wide_brim_mens',
+    name: 'NGN Wide Brim — Men\'s',
+    type: 'wide_brim',
+    priceDisplay: '$48',
+    description: 'Full-coverage 3.5" brim. UPF 50+ bamboo-blend fabric. Chin strap + ventilation grommets. Built for 8 hours on open water.',
+    material: 'Bamboo/poly blend, UPF 50+',
+    colors: ['Stone', 'Navy', 'Driftwood'],
+    season: 'spring',
+    genderFit: 'mens',
+    url: `${NGN_MERCH_STORE_URL}/ngn-wide-brim-mens`,
+  },
+  {
+    id: 'ngn_wide_brim_womens',
+    name: 'NGN Wide Brim — Women\'s',
+    type: 'wide_brim',
+    priceDisplay: '$48',
+    description: 'Shaped 3" brim with ponytail opening. UPF 50+ bamboo blend. Crushable for storage. Same sun protection, better fit.',
+    material: 'Bamboo/poly blend, UPF 50+',
+    colors: ['White Sand', 'Seafoam', 'Blush Coral'],
+    season: 'spring',
+    genderFit: 'womens',
+    url: `${NGN_MERCH_STORE_URL}/ngn-wide-brim-womens`,
+  },
+
+  // ── BAMBOO PERFORMANCE TOPS ───────────
+  {
+    id: 'ngn_bamboo_ls_spring',
+    name: 'NGN Bamboo LS — Spring Drop',
+    type: 'bamboo_ls',
+    priceDisplay: '$58',
+    description: 'Lightweight bamboo viscose long sleeve. UPF 50+. Tonal seafloor contour print inspired by Freefly patterns. NGN logo left chest.',
+    material: 'Bamboo viscose / recycled poly, UPF 50+',
+    colors: ['Tidal Blue', 'Sand Bar', 'Oyster Gray'],
+    season: 'spring',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-ls-spring`,
+  },
+  {
+    id: 'ngn_bamboo_ls_summer',
+    name: 'NGN Bamboo LS — Summer Drop',
+    type: 'bamboo_ls',
+    priceDisplay: '$58',
+    description: 'Same bamboo performance fabric, summer-weight. Tonal fish scale pattern. Thumb loops for hand coverage. The 6am-to-sunset shirt.',
+    material: 'Bamboo viscose / recycled poly, UPF 50+',
+    colors: ['Clearwater', 'Offshore White', 'Salt Flat'],
+    season: 'summer',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-ls-summer`,
+  },
+  {
+    id: 'ngn_bamboo_ss',
+    name: 'NGN Bamboo SS Tee',
+    type: 'bamboo_ss',
+    priceDisplay: '$44',
+    description: 'Short sleeve bamboo blend. Buttery soft, zero chafe under a PFD. Subtle tonal wave print. Boat ramp to oyster bar.',
+    material: 'Bamboo viscose / cotton, UPF 30+',
+    colors: ['Faded Navy', 'Seafoam', 'Heather Driftwood', 'White'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-ss`,
+  },
+  {
+    id: 'ngn_bamboo_ls_fall',
+    name: 'NGN Bamboo LS — Fall Drop',
+    type: 'bamboo_ls',
+    priceDisplay: '$58',
+    description: 'Mid-weight bamboo long sleeve for cool mornings. Tonal marsh grass print. Redfish season colors.',
+    material: 'Bamboo viscose / recycled poly, UPF 50+',
+    colors: ['Marsh Bronze', 'Pluff Mud', 'Inlet Gray'],
+    season: 'fall',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-ls-fall`,
+  },
+
+  // ── BAMBOO PULLOVER HOODIE ────────────
+  {
+    id: 'ngn_bamboo_hoodie',
+    name: 'NGN Bamboo Pullover Hoodie',
+    type: 'bamboo_hoodie',
+    priceDisplay: '$68',
+    description: 'Lightweight bamboo terry pullover with hood. 4-way stretch, antimicrobial. Built for early morning runs and late afternoon wind. NGN logo + "No Guide Needed" on back.',
+    material: 'Bamboo terry / spandex blend',
+    colors: ['Navy', 'Charcoal Heather', 'Stone'],
+    season: 'fall',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-hoodie`,
+  },
+  {
+    id: 'ngn_bamboo_hoodie_winter',
+    name: 'NGN Bamboo Hoodie — Winter Weight',
+    type: 'bamboo_hoodie',
+    priceDisplay: '$72',
+    description: 'Heavier bamboo fleece for winter inshore trips. Wind-resistant front panel, fleece-lined hood. The January dock fishing layer.',
+    material: 'Bamboo fleece / wind-resistant poly',
+    colors: ['Deep Navy', 'Charcoal'],
+    season: 'winter',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-hoodie-winter`,
+  },
+
+  // ── BAMBOO FACE GAITER / NECK PULL ────
+  {
+    id: 'ngn_bamboo_gaiter',
+    name: 'NGN Bamboo Gaiter',
+    type: 'bamboo_gaiter',
+    priceDisplay: '$28',
+    description: 'Bamboo viscose pullover face mask + neck wrap. UPF 50+, moisture-wicking, antimicrobial. Tonal ocean contour print. Covers neck to nose.',
+    material: 'Bamboo viscose, UPF 50+',
+    colors: ['Tidal Blue', 'Stone', 'Offshore White'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-gaiter`,
+  },
+  {
+    id: 'ngn_bamboo_gaiter_camo',
+    name: 'NGN Bamboo Gaiter — Marsh Camo',
+    type: 'bamboo_gaiter',
+    priceDisplay: '$28',
+    description: 'Same bamboo neck gaiter in tonal marsh grass camo. Pairs with the Marsh Camo trucker. Inshore stealth mode.',
+    material: 'Bamboo viscose, UPF 50+',
+    colors: ['Marsh Camo'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-bamboo-gaiter-camo`,
+  },
+
+  // ── ACCESSORIES (year-round) ──────────
+  {
+    id: 'ngn_decal',
+    name: 'NGN Boat Decal (6")',
+    type: 'decal',
+    priceDisplay: '$6',
+    description: 'Die-cut vinyl. Saltwater proof. Cooler, console, truck, yeti — stick it everywhere.',
+    colors: ['White', 'Seafoam'],
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-decal`,
+  },
+  {
+    id: 'ngn_koozie',
+    name: 'NGN Koozie',
+    type: 'koozie',
+    priceDisplay: '$8',
+    description: 'Neoprene can koozie. NGN logo + coordinates. Warm beer on a hot day is a crime.',
+    season: 'year_round',
+    genderFit: 'unisex',
+    url: `${NGN_MERCH_STORE_URL}/ngn-koozie`,
+  },
+];
+
 // ── Affiliate Partner Config ─────────────────
+// Sign up priority (by commission rate + relevance):
+//   1. Amazon Associates — 4% sports/outdoors, 24hr cookie, massive catalog
+//      → https://affiliate-program.amazon.com
+//   2. Bass Pro / Cabela's — 1-5%, 14-day cookie, Impact Radius
+//      → https://www.basspro.com/shop/en/affiliate-program
+//   3. TackleDirect — 3%, 30-day cookie, fishing-specific
+//      → https://www.tackledirect.com/company/affiliate-program
+//   4. Enigma Fishing — 20%, 90-day cookie, rods $100-300 (high ticket)
+//      → https://www.enigmafishing.com/pages/affiliate
+//   5. Discount Tackle — 3-5%, 30-day cookie
+//      → https://discounttackle.com/pages/discount-tackle-affiliate-program
+//   6. Pure Fishing (Penn, Berkley, Abu Garcia) — 10%, 14-day cookie
+//      → https://www.purefishing.com/pages/affiliate-program
 export interface AffiliatePartner {
   id: string;
   name: string;
   baseUrl: string;
   affiliateTag: string;   // appended to URLs for tracking
   commission: string;     // display only
+  cookieDays: number;     // tracking cookie duration
+  signupUrl: string;      // where to apply
+  status: 'active' | 'pending' | 'planned'; // enrollment status
   logo?: string;          // future: partner logo asset
 }
 
 export const AFFILIATE_PARTNERS: AffiliatePartner[] = [
   {
+    id: 'amazon',
+    name: 'Amazon',
+    baseUrl: 'https://www.amazon.com',
+    affiliateTag: 'ngnfishing-20', // TODO: replace with real Amazon Associates tag
+    commission: '4%',
+    cookieDays: 1,
+    signupUrl: 'https://affiliate-program.amazon.com',
+    status: 'pending',
+  },
+  {
     id: 'bass_pro',
     name: 'Bass Pro Shops',
     baseUrl: 'https://www.basspro.com',
-    affiliateTag: 'ngnfishing-20', // REPLACE with real affiliate tag
-    commission: '5-7%',
+    affiliateTag: 'ngnfishing-20', // TODO: replace with real Impact Radius tag
+    commission: '1-5%',
+    cookieDays: 14,
+    signupUrl: 'https://www.basspro.com/shop/en/affiliate-program',
+    status: 'pending',
+  },
+  {
+    id: 'tackle_direct',
+    name: 'TackleDirect',
+    baseUrl: 'https://www.tackledirect.com',
+    affiliateTag: 'ngnfishing', // TODO: replace with real tag
+    commission: '3%',
+    cookieDays: 30,
+    signupUrl: 'https://www.tackledirect.com/company/affiliate-program',
+    status: 'pending',
+  },
+  {
+    id: 'enigma',
+    name: 'Enigma Fishing',
+    baseUrl: 'https://www.enigmafishing.com',
+    affiliateTag: 'ngnfishing', // TODO: replace with real tag
+    commission: '20%',
+    cookieDays: 90,
+    signupUrl: 'https://www.enigmafishing.com/pages/affiliate',
+    status: 'pending',
+  },
+  {
+    id: 'pure_fishing',
+    name: 'Pure Fishing',
+    baseUrl: 'https://www.purefishing.com',
+    affiliateTag: 'ngnfishing', // TODO: replace with real tag
+    commission: '10%',
+    cookieDays: 14,
+    signupUrl: 'https://www.purefishing.com/pages/affiliate-program',
+    status: 'pending',
+  },
+  {
+    id: 'discount_tackle',
+    name: 'Discount Tackle',
+    baseUrl: 'https://discounttackle.com',
+    affiliateTag: 'ngnfishing', // TODO: replace with real tag
+    commission: '3-5%',
+    cookieDays: 30,
+    signupUrl: 'https://discounttackle.com/pages/discount-tackle-affiliate-program',
+    status: 'pending',
   },
   {
     id: 'sportsmans',
     name: "Sportsman's Warehouse",
     baseUrl: 'https://www.sportsmans.com',
-    affiliateTag: 'ngnfishing', // REPLACE with real affiliate tag
+    affiliateTag: 'ngnfishing', // TODO: replace with real tag
     commission: '5-6%',
-  },
-  {
-    id: 'tackle_direct',
-    name: 'Tackle Direct',
-    baseUrl: 'https://www.tackledirect.com',
-    affiliateTag: 'ngnfishing', // REPLACE with real affiliate tag
-    commission: '6-8%',
-  },
-  {
-    id: 'amazon',
-    name: 'Amazon',
-    baseUrl: 'https://www.amazon.com',
-    affiliateTag: 'ngnfishing-20', // REPLACE with real Amazon Associates tag
-    commission: '4%',
+    cookieDays: 14,
+    signupUrl: 'https://www.sportsmans.com/sportsmans-warehouse-affiliate-program',
+    status: 'pending',
   },
 ];
 

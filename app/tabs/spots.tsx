@@ -10,15 +10,14 @@ import { useReportStore, useAuthStore, useConditionsStore } from '@stores/index'
 import { startCheckout } from '@services/stripeService';
 import { scoutNearbyStructure, type ScoutResult } from '@services/scoutService';
 import {
-  isCastTrackerAvailable,
-  startCastTracking,
-  stopCastTracking,
+  isCastGuideAvailable,
+  startCastGuide,
+  stopCastGuide,
   updateAnglerPosition,
-  setTackleWeight,
   bearingToCardinal,
-  isCastStale,
+  isCastable,
 } from '@services/castTrackerService';
-import { TACKLE_WEIGHTS, type CastEstimate } from '@constants/castTracker';
+import { CAST_GUIDE, type CastGuideState } from '@constants/castTracker';
 import type { FishingSpot } from '@app-types/index';
 import { clusterReportSpots } from '@services/clusterService';
 import { getWaypointInfo, sortSpotsByDistance, type WaypointInfo } from '@services/waypointNavService';
@@ -87,13 +86,9 @@ export default function SpotsScreen() {
   const [scouting, setScouting] = useState(false);
   const [selectedScout, setSelectedScout] = useState<ScoutResult | null>(null);
 
-  // ── Cast Tracker state ─────────────────
-  const [castTracking, setCastTracking] = useState(false);
-  const [activeCast, setActiveCast] = useState<CastEstimate | null>(null);
-  const [castHistory, setCastHistory] = useState<CastEstimate[]>([]);
-  const [selectedTackle, setSelectedTackle] = useState('medium');
-  const [showTackleSelect, setShowTackleSelect] = useState(false);
-  const castAvailable = isCastTrackerAvailable();
+  // ── Cast Guide state ───────────────────
+  const [castGuide, setCastGuide] = useState<CastGuideState | null>(null);
+  const castGuideAvailable = isCastGuideAvailable();
 
   // ── Waypoint Navigation state ─────────────
   const [navActive, setNavActive] = useState(false);
@@ -188,64 +183,41 @@ export default function SpotsScreen() {
     setSelectedScout(null);
   }, []);
 
-  // ── Cast Tracker controls ──────────────
-  const handleCastDetected = useCallback((cast: CastEstimate) => {
-    setActiveCast(cast);
-    setCastHistory((prev) => [cast, ...prev].slice(0, 20)); // keep last 20
-    // Animate map to show both angler and rig position
-    if (mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: (cast.userLat + cast.estimatedLat) / 2,
-        longitude: (cast.userLng + cast.estimatedLng) / 2,
-        latitudeDelta: Math.max(0.005, Math.abs(cast.userLat - cast.estimatedLat) * 3),
-        longitudeDelta: Math.max(0.005, Math.abs(cast.userLng - cast.estimatedLng) * 3),
-      }, 400);
-    }
-  }, []);
-
-  const toggleCastTracking = useCallback(async () => {
-    if (castTracking) {
-      stopCastTracking();
-      setCastTracking(false);
-    } else {
-      const ok = await startCastTracking(handleCastDetected, selectedTackle);
-      if (ok) {
-        setCastTracking(true);
-      } else {
-        Alert.alert(
-          'Sensors Unavailable',
-          'Cast tracking requires accelerometer and gyroscope sensors. This feature is available on iOS and Android devices.',
-        );
-      }
-    }
-  }, [castTracking, handleCastDetected, selectedTackle]);
-
-  const handleTackleChange = useCallback((tackleId: string) => {
-    setSelectedTackle(tackleId);
-    setTackleWeight(tackleId);
-    setShowTackleSelect(false);
-  }, []);
-
-  const clearCastHistory = useCallback(() => {
-    setActiveCast(null);
-    setCastHistory([]);
-  }, []);
-
-  // Keep angler position updated for the cast tracker
-  useEffect(() => {
-    if (!castTracking) return;
-    // Use conditions location as baseline, update from map if available
+  // ── Cast Guide controls ────────────────
+  const startGuide = useCallback(async (spot: FishingSpot) => {
     const loc = conditions?.location;
-    if (loc) {
-      updateAnglerPosition(loc.lat, loc.lng);
+    if (loc) updateAnglerPosition(loc.lat, loc.lng);
+
+    const ok = await startCastGuide(
+      spot.coordinates.lat,
+      spot.coordinates.lng,
+      spot.name,
+      spot.depthFt ?? '',
+      (state) => setCastGuide(state),
+    );
+    if (!ok) {
+      Alert.alert(
+        'Compass Unavailable',
+        'Cast Guide requires a compass sensor. This feature is available on iOS and Android devices.',
+      );
     }
-  }, [castTracking, conditions?.location]);
+  }, [conditions?.location]);
+
+  const stopGuide = useCallback(() => {
+    stopCastGuide();
+    setCastGuide(null);
+  }, []);
+
+  // Keep angler position updated for the cast guide
+  useEffect(() => {
+    if (!castGuide?.isActive) return;
+    const loc = conditions?.location;
+    if (loc) updateAnglerPosition(loc.lat, loc.lng);
+  }, [castGuide?.isActive, conditions?.location]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      stopCastTracking();
-    };
+    return () => { stopCastGuide(); };
   }, []);
 
   // ── Waypoint Navigation — update nav info when target or location changes ──
@@ -399,14 +371,22 @@ export default function SpotsScreen() {
         showsCompass
         showsScale
         onLongPress={handleMapLongPress}
+        loadingEnabled
+        loadingIndicatorColor={COLORS.seafoam}
+        loadingBackgroundColor={COLORS.navy}
       >
         {/* ESRI Ocean Relief basemap — full quality for Pro Angler, preview for others */}
         {baseMap === 'ocean' && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_TILE_URL}
-            maximumZ={isAnglerTier ? 16 : 10}
+            maximumZ={isAnglerTier ? 13 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 1 : 0.6}
+            tileCachePath="esri_ocean"
+            tileCacheMaxAge={86400}
+            offlineMode={false}
+            shouldReplaceMapContent={true}
+            flipY={false}
             zIndex={1}
           />
         )}
@@ -415,9 +395,13 @@ export default function SpotsScreen() {
         {showDepthChart && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_ENC_TILE_URL}
-            maximumZ={isAnglerTier ? 17 : 10}
+            maximumZ={isAnglerTier ? 14 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.85 : 0.4}
+            tileCachePath="noaa_enc"
+            tileCacheMaxAge={86400}
+            offlineMode={false}
+            flipY={false}
             zIndex={2}
           />
         )}
@@ -426,9 +410,13 @@ export default function SpotsScreen() {
         {showNautical && UrlTile && (
           <UrlTile
             urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 15 : 10}
+            maximumZ={isAnglerTier ? 14 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.75 : 0.4}
+            tileCachePath="noaa_chart"
+            tileCacheMaxAge={86400}
+            offlineMode={false}
+            flipY={false}
             zIndex={3}
           />
         )}
@@ -437,9 +425,13 @@ export default function SpotsScreen() {
         {showSeamarks && UrlTile && (
           <UrlTile
             urlTemplate={OPENSEAMAP_TILE_URL}
-            maximumZ={isAnglerTier ? 17 : 10}
+            maximumZ={isAnglerTier ? 14 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
+            tileCachePath="openseamap"
+            tileCacheMaxAge={86400}
+            offlineMode={false}
+            flipY={false}
             zIndex={4}
           />
         )}
@@ -448,9 +440,13 @@ export default function SpotsScreen() {
         {showLabels && UrlTile && (
           <UrlTile
             urlTemplate={ESRI_OCEAN_REF_URL}
-            maximumZ={isAnglerTier ? 16 : 10}
+            maximumZ={isAnglerTier ? 13 : 10}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
+            tileCachePath="esri_labels"
+            tileCacheMaxAge={86400}
+            offlineMode={false}
+            flipY={false}
             zIndex={5}
           />
         )}
@@ -495,27 +491,27 @@ export default function SpotsScreen() {
           />
         ))}
 
-        {/* Cast tracker — active rig position marker */}
-        {activeCast && Marker && (
+        {/* Cast Guide — target structure marker with guide line */}
+        {castGuide?.isActive && Marker && (
           <Marker
-            coordinate={{ latitude: activeCast.estimatedLat, longitude: activeCast.estimatedLng }}
-            title={`RIG — ${activeCast.estimatedDistanceYds} yds ${bearingToCardinal(activeCast.estimatedBearing)}`}
-            description={`±${activeCast.accuracyRadiusYds} yds accuracy`}
-            pinColor="#FF6B35"
-            onPress={() => setSelectedSpot(null)}
+            coordinate={{ latitude: castGuide.targetLat, longitude: castGuide.targetLng }}
+            title={`TARGET — ${castGuide.targetName}`}
+            description={`${castGuide.distanceYds} yds · ${bearingToCardinal(castGuide.bearingDeg)}`}
+            pinColor={castGuide.isAimedAtTarget ? '#2ECC71' : '#F39C12'}
           />
         )}
-
-        {/* Cast history markers (dimmed) */}
-        {castHistory.slice(1).map((c) => Marker && (
-          <Marker
-            key={c.id}
-            coordinate={{ latitude: c.estimatedLat, longitude: c.estimatedLng }}
-            title={`Previous — ${c.estimatedDistanceYds} yds`}
-            pinColor="#FF6B3566"
-            opacity={0.4}
+        {castGuide?.isActive && conditions?.location && Polyline && (
+          <Polyline
+            coordinates={[
+              { latitude: conditions.location.lat, longitude: conditions.location.lng },
+              { latitude: castGuide.targetLat, longitude: castGuide.targetLng },
+            ]}
+            strokeColor={castGuide.isAimedAtTarget ? '#2ECC71' : '#F39C12'}
+            strokeWidth={2}
+            lineDashPattern={[6, 4]}
+            zIndex={9}
           />
-        ))}
+        )}
 
         {/* Waypoint navigation route line */}
         {navActive && navTarget && conditions?.location && Polyline && (
@@ -568,10 +564,24 @@ export default function SpotsScreen() {
         <Text style={s.layerToggleText}>LAYERS</Text>
       </TouchableOpacity>
 
+      {/* ── Layer panel backdrop — tap to close ── */}
+      {showLayerPanel && (
+        <TouchableOpacity
+          style={s.layerBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowLayerPanel(false)}
+        />
+      )}
+
       {/* ── Layer Control Panel ────────────────── */}
       {showLayerPanel && (
         <View style={s.layerPanel}>
-          <Text style={s.layerPanelTitle}>MAP LAYERS</Text>
+          <View style={s.layerPanelHeader}>
+            <Text style={s.layerPanelTitle}>MAP LAYERS</Text>
+            <TouchableOpacity onPress={() => setShowLayerPanel(false)}>
+              <Text style={s.layerPanelClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
           {MAP_LAYERS.map((layer) => {
             const active = isLayerActive(layer.id);
             const isProLayer = layer.anglerOnly && !isAnglerTier;
@@ -635,108 +645,66 @@ export default function SpotsScreen() {
         </TouchableOpacity>
       )}
 
-      {/* ── Cast Tracker Toggle Button ─────── */}
-      {castAvailable && (
-        <TouchableOpacity
-          style={[s.castToggleBtn, castTracking && s.castToggleBtnActive]}
-          onPress={toggleCastTracking}
-          activeOpacity={0.8}
-        >
-          <Text style={s.castToggleIcon}>🎯</Text>
-          <Text style={[s.castToggleText, castTracking && s.castToggleTextActive]}>
-            {castTracking ? 'TRACKING' : 'CAST PLOT'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* ── Cast Tracker Tackle Weight Selector ── */}
-      {castTracking && (
-        <TouchableOpacity
-          style={s.tackleBtn}
-          onPress={() => setShowTackleSelect((p) => !p)}
-          activeOpacity={0.8}
-        >
-          <Text style={s.tackleBtnText}>
-            ⚖ {TACKLE_WEIGHTS.find((t) => t.id === selectedTackle)?.label ?? 'Medium'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Tackle weight picker dropdown */}
-      {showTackleSelect && (
-        <View style={s.tacklePanel}>
-          <Text style={s.tacklePanelTitle}>TACKLE WEIGHT</Text>
-          <Text style={s.tacklePanelSub}>Affects distance estimation</Text>
-          {TACKLE_WEIGHTS.map((tw) => (
-            <TouchableOpacity
-              key={tw.id}
-              style={[s.tackleRow, tw.id === selectedTackle && s.tackleRowActive]}
-              onPress={() => handleTackleChange(tw.id)}
-              activeOpacity={0.75}
-            >
-              <View style={s.tackleRowInfo}>
-                <Text style={[s.tackleRowLabel, tw.id === selectedTackle && s.tackleRowLabelActive]}>
-                  {tw.label}
-                </Text>
-                <Text style={s.tackleRowDesc}>{tw.description}</Text>
-              </View>
-              {tw.id === selectedTackle && (
-                <Text style={s.tackleCheck}>✓</Text>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* ── Active Cast Info Card ────────────── */}
-      {activeCast && !selectedSpot && !selectedScout && (
-        <View style={s.castCard}>
-          <View style={s.castCardHeader}>
+      {/* ── Cast Guide Compass Card ────────── */}
+      {castGuide?.isActive && (
+        <View style={s.castGuideCard}>
+          <View style={s.castGuideHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={s.castCardTitle}>🎯 RIG POSITION (ESTIMATED)</Text>
-              <Text style={s.castCardDisclaimer}>±{activeCast.accuracyRadiusYds} yds accuracy</Text>
+              <Text style={s.castGuideTitle}>GUIDE MY CAST</Text>
+              <Text style={s.castGuideTarget} numberOfLines={1}>
+                {castGuide.targetName}
+                {castGuide.targetDepth ? ` — ${castGuide.targetDepth}` : ''}
+              </Text>
             </View>
-            <TouchableOpacity onPress={clearCastHistory}>
+            <TouchableOpacity onPress={stopGuide}>
               <Text style={s.spotDetailClose}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={s.castCardStats}>
-            <View style={s.castStat}>
-              <Text style={s.castStatValue}>{activeCast.estimatedDistanceYds}</Text>
-              <Text style={s.castStatLabel}>YARDS</Text>
+          {/* Compass arrow + aim indicator */}
+          <View style={s.castGuideCompass}>
+            <Text style={[
+              s.castGuideArrow,
+              { color: castGuide.isAimedAtTarget ? CAST_GUIDE.ARROW_ON_TARGET : CAST_GUIDE.ARROW_OFF_TARGET },
+              { transform: [{ rotate: `${castGuide.aimOffsetDeg}deg` }] },
+            ]}>
+              ▲
+            </Text>
+            <Text style={[
+              s.castGuideAimLabel,
+              { color: castGuide.isAimedAtTarget ? CAST_GUIDE.ARROW_ON_TARGET : CAST_GUIDE.ARROW_OFF_TARGET },
+            ]}>
+              {castGuide.isAimedAtTarget ? 'ON TARGET' : `${Math.abs(castGuide.aimOffsetDeg)}° OFF`}
+            </Text>
+          </View>
+
+          {/* Stats row */}
+          <View style={s.castGuideStats}>
+            <View style={s.castGuideStat}>
+              <Text style={s.castGuideStatValue}>{castGuide.distanceYds}</Text>
+              <Text style={s.castGuideStatLabel}>YARDS</Text>
             </View>
-            <View style={s.castStat}>
-              <Text style={s.castStatValue}>{bearingToCardinal(activeCast.estimatedBearing)}</Text>
-              <Text style={s.castStatLabel}>BEARING</Text>
+            <View style={s.castGuideStat}>
+              <Text style={s.castGuideStatValue}>{bearingToCardinal(castGuide.bearingDeg)}</Text>
+              <Text style={s.castGuideStatLabel}>DIRECTION</Text>
             </View>
-            <View style={s.castStat}>
-              <Text style={s.castStatValue}>{activeCast.estimatedBearing}°</Text>
-              <Text style={s.castStatLabel}>HEADING</Text>
-            </View>
-            <View style={s.castStat}>
-              <Text style={s.castStatValue}>{Math.round(activeCast.peakAcceleration)}</Text>
-              <Text style={s.castStatLabel}>FORCE</Text>
+            <View style={s.castGuideStat}>
+              <Text style={s.castGuideStatValue}>{castGuide.bearingDeg}°</Text>
+              <Text style={s.castGuideStatLabel}>BEARING</Text>
             </View>
           </View>
 
-          <Text style={s.castCardCoords}>
-            Est. position: {activeCast.estimatedLat.toFixed(5)}, {activeCast.estimatedLng.toFixed(5)}
+          {/* Castable distance indicator */}
+          <Text style={[
+            s.castGuideRange,
+            { color: isCastable(castGuide.distanceYds) ? CAST_GUIDE.ARROW_ON_TARGET : '#F39C12' },
+          ]}>
+            {isCastable(castGuide.distanceYds)
+              ? castGuide.distanceYds <= CAST_GUIDE.ON_TARGET_DISTANCE_YDS
+                ? 'YOU\'RE ON TOP OF IT'
+                : 'WITHIN CASTING RANGE'
+              : `MOVE ${castGuide.distanceYds - CAST_GUIDE.MAX_CASTABLE_DISTANCE_YDS} YDS CLOSER`}
           </Text>
-
-          {castHistory.length > 1 && (
-            <Text style={s.castHistoryCount}>
-              {castHistory.length} casts tracked this session
-            </Text>
-          )}
-
-          <TouchableOpacity
-            style={s.castNavBtn}
-            onPress={() => openNavigation(activeCast.estimatedLat, activeCast.estimatedLng, 'Rig Position')}
-            activeOpacity={0.85}
-          >
-            <Text style={s.spotDetailNavText}>NAVIGATE TO RIG →</Text>
-          </TouchableOpacity>
         </View>
       )}
 
@@ -899,6 +867,23 @@ export default function SpotsScreen() {
               📐 {selectedScout.approach}
             </Text>
           )}
+
+          {/* Guide My Cast — for scouted structure */}
+          {castGuideAvailable && (
+            <TouchableOpacity
+              style={s.guideMycastBtn}
+              onPress={() => startGuide({
+                name: selectedScout.name,
+                coordinates: { lat: selectedScout.lat, lng: selectedScout.lng },
+                depthFt: selectedScout.depthFt,
+                notes: selectedScout.why,
+              } as FishingSpot)}
+              activeOpacity={0.85}
+            >
+              <Text style={s.guideMycastText}>GUIDE MY CAST</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={s.spotDetailNav}
             onPress={() => openNavigation(selectedScout.lat, selectedScout.lng, selectedScout.name)}
@@ -982,6 +967,18 @@ export default function SpotsScreen() {
           {selectedSpot.notes && (
             <Text style={s.spotDetailNotes}>{selectedSpot.notes}</Text>
           )}
+
+          {/* Guide My Cast button — compass sensor required */}
+          {castGuideAvailable && (
+            <TouchableOpacity
+              style={s.guideMycastBtn}
+              onPress={() => startGuide(selectedSpot)}
+              activeOpacity={0.85}
+            >
+              <Text style={s.guideMycastText}>GUIDE MY CAST</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={s.spotDetailNav}
             onPress={() => openNavigation(
@@ -1080,6 +1077,17 @@ const s = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
+  // ── Layer backdrop (tap to close) ────
+  layerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 9,
+  },
+
   // ── Layer Control Panel ──────────────
   layerPanel: {
     position: 'absolute',
@@ -1089,14 +1097,26 @@ const s = StyleSheet.create({
     backgroundColor: PANEL_BG,
     borderWidth: 1,
     borderColor: GRID_LINE,
+    borderRadius: 8,
     padding: 12,
+    zIndex: 10,
+  },
+  layerPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   layerPanelTitle: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
     fontFamily: MONO,
     letterSpacing: 2,
-    marginBottom: 10,
+  },
+  layerPanelClose: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    paddingHorizontal: 4,
   },
   layerRow: {
     flexDirection: 'row',
@@ -1130,7 +1150,8 @@ const s = StyleSheet.create({
   },
   layerDesc: {
     fontSize: 9,
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
+    fontFamily: MONO,
     marginTop: 2,
     lineHeight: 13,
   },
@@ -1201,18 +1222,19 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 60,
     left: 100,
-    backgroundColor: `${COLORS.seafoam}22`,
+    backgroundColor: 'rgba(10,37,64,0.9)',
     borderWidth: 1,
-    borderColor: `${COLORS.seafoam}44`,
+    borderColor: COLORS.seafoam,
+    borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
   activeLayersText: {
-    fontSize: 8,
-    color: COLORS.seafoam,
+    fontSize: 10,
+    color: COLORS.white,
     fontFamily: MONO,
     letterSpacing: 1,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   // ── Waypoint Nav Toggle Button ───────
@@ -1712,144 +1734,56 @@ const s = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // ── Cast Tracker styles ───────────
-  castToggleBtn: {
-    position: 'absolute',
-    top: 100,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: PANEL_BG,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: GRID_LINE,
-    gap: 5,
-  },
-  castToggleBtnActive: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FF6B3518',
-  },
-  castToggleIcon: {
-    fontSize: 12,
-  },
-  castToggleText: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    fontFamily: MONO,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-  },
-  castToggleTextActive: {
-    color: '#FF6B35',
-  },
-  tackleBtn: {
-    position: 'absolute',
-    top: 135,
-    left: 12,
-    backgroundColor: PANEL_BG,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#FF6B3544',
-  },
-  tackleBtnText: {
-    fontSize: 9,
-    color: '#FF6B35',
-    fontFamily: MONO,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  tacklePanel: {
-    position: 'absolute',
-    top: 160,
-    left: 12,
-    width: 220,
-    backgroundColor: PANEL_BG,
-    borderWidth: 1,
-    borderColor: '#FF6B3544',
-    padding: 12,
-  },
-  tacklePanelTitle: {
-    fontSize: 10,
-    color: '#FF6B35',
-    fontFamily: MONO,
-    letterSpacing: 2,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  tacklePanelSub: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    marginBottom: 10,
-  },
-  tackleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    marginBottom: 3,
-  },
-  tackleRowActive: {
-    borderColor: '#FF6B3544',
-    backgroundColor: '#FF6B350A',
-  },
-  tackleRowInfo: { flex: 1 },
-  tackleRowLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    fontFamily: MONO,
-  },
-  tackleRowLabelActive: {
-    color: '#FF6B35',
-  },
-  tackleRowDesc: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    marginTop: 1,
-  },
-  tackleCheck: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FF6B35',
-    marginLeft: 8,
-  },
-
-  // ── Cast Info Card ────────────────
-  castCard: {
+  // ── Cast Guide styles ──────────────
+  castGuideCard: {
     position: 'absolute',
     bottom: 24,
     left: 12,
     right: 12,
     backgroundColor: PANEL_BG,
     borderWidth: 1,
-    borderColor: '#FF6B35',
+    borderColor: '#4ECDC4',
     padding: 14,
   },
-  castCardHeader: {
+  castGuideHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 10,
   },
-  castCardTitle: {
+  castGuideTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#FF6B35',
+    color: '#4ECDC4',
     fontFamily: MONO,
     letterSpacing: 1.5,
   },
-  castCardDisclaimer: {
-    fontSize: 9,
-    color: COLORS.textMuted,
+  castGuideTarget: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
     fontFamily: MONO,
     marginTop: 2,
   },
-  castCardStats: {
+  castGuideCompass: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: GRID_LINE,
+  },
+  castGuideArrow: {
+    fontSize: 48,
+    fontWeight: '800',
+  },
+  castGuideAimLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: MONO,
+    letterSpacing: 2,
+    marginTop: 6,
+  },
+  castGuideStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
@@ -1857,38 +1791,41 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: GRID_LINE,
   },
-  castStat: {
+  castGuideStat: {
     alignItems: 'center',
     flex: 1,
   },
-  castStatValue: {
+  castGuideStatValue: {
     fontSize: 20,
     fontWeight: '800',
     color: COLORS.white,
     fontFamily: MONO,
   },
-  castStatLabel: {
+  castGuideStatLabel: {
     fontSize: 8,
     color: COLORS.textMuted,
     fontFamily: MONO,
     letterSpacing: 1.5,
     marginTop: 2,
   },
-  castCardCoords: {
+  castGuideRange: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    fontWeight: '700',
     fontFamily: MONO,
-    marginBottom: 6,
+    letterSpacing: 1.5,
+    textAlign: 'center',
   },
-  castHistoryCount: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    fontFamily: MONO,
-    marginBottom: 10,
-  },
-  castNavBtn: {
-    backgroundColor: '#FF6B35',
+  guideMycastBtn: {
+    backgroundColor: '#4ECDC4',
     paddingVertical: 10,
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  guideMycastText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#060E1A',
+    fontFamily: MONO,
+    letterSpacing: 2,
   },
 });

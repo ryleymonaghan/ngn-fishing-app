@@ -64,6 +64,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="shop"
+        options={{
+          title: 'GEAR SHOP',
+          tabBarLabel: 'SHOP',
+          tabBarIcon: ({ color }) => <TabIcon icon="🏷" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="knots"
         options={{
           title: 'GUIDES',
@@ -84,7 +92,6 @@ export default function TabLayout() {
       <Tabs.Screen name="triplog"  options={{ href: null, title: 'TRIP LOG' }} />
       <Tabs.Screen name="catches"  options={{ href: null, title: 'CATCHES' }} />
       <Tabs.Screen name="rigs"     options={{ href: null, title: 'RIG GUIDE' }} />
-      <Tabs.Screen name="shop"     options={{ href: null, title: 'GEAR SHOP' }} />
     </Tabs>
   );
 }
