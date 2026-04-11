@@ -644,6 +644,34 @@ export default function SpotsScreen() {
         </TouchableOpacity>
       )}
 
+      {/* ── Drop Pin Button ─────────────────── */}
+      <TouchableOpacity
+        style={[s.dropPinBtn, droppedPin && s.dropPinBtnActive]}
+        onPress={() => {
+          if (droppedPin) {
+            // Clear existing pin
+            clearPin();
+          } else {
+            // Drop pin at current map center (or user location)
+            const loc = conditions?.location;
+            if (loc) {
+              setDroppedPin({ lat: loc.lat, lng: loc.lng });
+              setScoutResults(null);
+              setSelectedScout(null);
+              setSelectedSpot(null);
+            } else {
+              Alert.alert('Location Required', 'Enable location services to drop a pin at your position.');
+            }
+          }
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={s.dropPinIcon}>{droppedPin ? '✕' : '◉'}</Text>
+        <Text style={[s.dropPinText, droppedPin && s.dropPinTextActive]}>
+          {droppedPin ? 'CLEAR PIN' : 'DROP PIN'}
+        </Text>
+      </TouchableOpacity>
+
       {/* ── Cast Guide Compass Card ────────── */}
       {castGuide?.isActive && (
         <View style={s.castGuideCard}>
@@ -1266,6 +1294,39 @@ const s = StyleSheet.create({
   },
   navToggleTextActive: {
     color: COLORS.seafoam,
+  },
+
+  // ── Drop Pin Button ───────────────────
+  dropPinBtn: {
+    position: 'absolute',
+    top: 100,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PANEL_BG,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: GRID_LINE,
+    gap: 5,
+  },
+  dropPinBtnActive: {
+    borderColor: COLORS.warning,
+    backgroundColor: `${COLORS.warning}15`,
+  },
+  dropPinIcon: {
+    fontSize: 13,
+    color: COLORS.warning,
+  },
+  dropPinText: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    fontFamily: MONO,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  dropPinTextActive: {
+    color: COLORS.warning,
   },
 
   // ── Waypoint Nav Compass Card ─────────

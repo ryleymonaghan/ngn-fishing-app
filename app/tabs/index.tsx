@@ -391,14 +391,13 @@ export default function ConditionsScreen() {
           <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={COLORS.seafoam} />
         }
       >
-        {/* ── Header — Logo centered above brand name ── */}
+        {/* ── Header — Logo + location info ── */}
         <View style={s.headerLogoBlock}>
           <Image
             source={require('../../assets/logo-source.png')}
             style={s.headerLogo}
             resizeMode="contain"
           />
-          <Text style={s.headerBrandName}>NGN FISHING</Text>
         </View>
 
         {/* Info row — time, location, station */}
@@ -407,9 +406,6 @@ export default function ConditionsScreen() {
           <Text style={s.headerLoc}>{locationLabel}</Text>
           <Text style={s.headerStation}>STA {stationId}</Text>
         </View>
-
-        {/* Slogan */}
-        <Text style={s.slogan}>{APP_SLOGAN}</Text>
 
         {/* Thin scanline accent */}
         <View style={s.scanline} />
@@ -723,29 +719,12 @@ const s = StyleSheet.create({
     width: 120,
     height: 120,
   },
-  headerBrandName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.seafoam,
-    letterSpacing: 6,
-    fontFamily: MONO,
-    marginTop: 4,
-  },
   headerInfoRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
     marginBottom: 2,
-  },
-  slogan: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: -4,
-    letterSpacing: 0.5,
   },
   headerTime: {
     fontSize: 14,
