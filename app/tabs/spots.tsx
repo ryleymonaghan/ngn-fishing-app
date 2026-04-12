@@ -42,11 +42,17 @@ if (Platform.OS !== 'web') {
 // ── Tile Layer URLs ──────────────────────────────
 // All tiles cached for 3 days (259200s) on device, refreshed in background
 //
-// NOAA Chart Display Service (NCDS) — replaced the old tileservice.charts.noaa.gov (shut down 2021)
-// Shows: depth soundings, contour lines, channels, markers, bottom type — the real depth data
-const NOAA_CHART_TILE_URL = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/tile/{z}/{y}/{x}';
-// ESRI Ocean Base: blue bathymetric gradient shading of ocean floor
-const ESRI_OCEAN_BASE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}';
+// GEBCO Shaded Relief (WMS) — dramatic bathymetric terrain visualization of ocean floor
+// Free service from the General Bathymetric Chart of the Oceans (Nippon Foundation-GEBCO Seabed 2030)
+const GEBCO_WMS_URL = 'https://wms.gebco.net/mapserv?';
+const GEBCO_RELIEF_LAYER = 'GEBCO_LATEST';       // shaded relief imagery
+const GEBCO_COLOR_LAYER  = 'GEBCO_LATEST_2';     // colour-shaded elevation
+//
+// NOAA ENC Online (WMS) — depth soundings, contour lines, channels, markers, bottom type
+// Using WMS instead of REST tiles to avoid the react-native-maps UrlTile zoom-level mismatch
+// (see: github.com/react-native-maps/react-native-maps/discussions/4354)
+const NOAA_WMS_URL = 'https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/ENCOnline/MapServer/exts/MaritimeChartService/WMSServer?';
+//
 // ESRI Ocean Reference: place names, ocean features, reef labels
 const ESRI_OCEAN_REF_URL  = 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}';
 // OpenSeaMap: buoys, beacons, aids to navigation
@@ -65,9 +71,9 @@ interface MapLayer {
 
 const MAP_LAYERS: MapLayer[] = [
   { id: 'satellite',  label: 'Satellite',            shortLabel: 'SAT',    description: 'Standard satellite imagery',                                      anglerOnly: false },
-  { id: 'ocean',      label: 'Ocean Relief',         shortLabel: 'RELIEF', description: 'ESRI bathymetric shading — blue depth gradient of ocean floor',    anglerOnly: true  },
-  { id: 'depthchart', label: 'NOAA Depth Chart',     shortLabel: 'DEPTH',  description: 'NOAA chart — depth soundings, contour lines, channels, bottom',   anglerOnly: true  },
-  { id: 'nautical',   label: 'Chart Overlay',        shortLabel: 'CHART',  description: 'NOAA chart at lower opacity — use as reference over satellite',    anglerOnly: true  },
+  { id: 'ocean',      label: 'Ocean Relief',         shortLabel: 'RELIEF', description: 'GEBCO bathymetric terrain — shaded relief of the ocean floor',      anglerOnly: true  },
+  { id: 'depthchart', label: 'NOAA Depth Chart',     shortLabel: 'DEPTH',  description: 'NOAA ENC chart — depth soundings, contour lines, channels',        anglerOnly: true  },
+  { id: 'nautical',   label: 'Chart Overlay',        shortLabel: 'CHART',  description: 'NOAA ENC chart at lower opacity — reference overlay on satellite',  anglerOnly: true  },
   { id: 'seamarks',   label: 'Sea Marks',            shortLabel: 'MARKS',  description: 'Buoys, beacons, aids to navigation',                              anglerOnly: true  },
   { id: 'labels',     label: 'Ocean Labels',         shortLabel: 'LABEL',  description: 'Place names, ocean features, reef labels',                         anglerOnly: true  },
 ];
@@ -403,49 +409,43 @@ export default function SpotsScreen() {
         loadingIndicatorColor={COLORS.seafoam}
         loadingBackgroundColor={COLORS.navy}
       >
-        {/* ESRI Ocean Base — blue bathymetric gradient shading of ocean floor */}
-        {baseMap === 'ocean' && UrlTile && (
-          <UrlTile
-            urlTemplate={ESRI_OCEAN_BASE_URL}
-            maximumZ={isAnglerTier ? 13 : 10}
+        {/* GEBCO Shaded Relief — dramatic bathymetric terrain visualization */}
+        {baseMap === 'ocean' && WMSTile && (
+          <WMSTile
+            urlTemplate={GEBCO_WMS_URL}
+            layers={[GEBCO_RELIEF_LAYER]}
+            version="1.1.1"
+            transparent={false}
             tileSize={256}
             opacity={isAnglerTier ? 1 : 0.6}
             shouldReplaceMapContent={true}
-            tileCachePath="esri_ocean_base"
-            tileCacheMaxAge={259200}
-            offlineMode={false}
-            flipY={false}
             zIndex={1}
           />
         )}
 
-        {/* NOAA Chart Display Service — depth soundings, contour lines, channels */}
+        {/* NOAA ENC Chart — depth soundings, contour lines, channels (WMS) */}
         {/* DEPTH toggle: shows NOAA chart at high opacity over the base map */}
-        {showDepthChart && UrlTile && (
-          <UrlTile
-            urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 18 : 13}
+        {showDepthChart && WMSTile && (
+          <WMSTile
+            urlTemplate={NOAA_WMS_URL}
+            layers={['0','1','2','3','4','5','6']}
+            version="1.3.0"
+            transparent={true}
             tileSize={256}
             opacity={isAnglerTier ? 0.9 : 0.5}
-            tileCachePath="noaa_depth"
-            tileCacheMaxAge={259200}
-            offlineMode={false}
-            flipY={false}
             zIndex={2}
           />
         )}
 
         {/* CHART toggle: same NOAA chart but lower opacity as reference overlay */}
-        {showNautical && !showDepthChart && UrlTile && (
-          <UrlTile
-            urlTemplate={NOAA_CHART_TILE_URL}
-            maximumZ={isAnglerTier ? 18 : 13}
+        {showNautical && !showDepthChart && WMSTile && (
+          <WMSTile
+            urlTemplate={NOAA_WMS_URL}
+            layers={['0','1','2','3','4','5','6']}
+            version="1.3.0"
+            transparent={true}
             tileSize={256}
             opacity={isAnglerTier ? 0.6 : 0.35}
-            tileCachePath="noaa_chart"
-            tileCacheMaxAge={259200}
-            offlineMode={false}
-            flipY={false}
             zIndex={3}
           />
         )}

@@ -85,7 +85,7 @@ export const NOAA_BUOYS = {
 
 // ── Claude API Config ────────────────────────
 export const CLAUDE_CONFIG = {
-  MODEL:          'claude-sonnet-4-5-20250514',
+  MODEL:          'claude-sonnet-4-6',
   MAX_TOKENS:     4096,
   SYSTEM_PROMPT: `You are NGN Fishing — an elite AI fishing guide for the Southeast USA coast. 
 You have deep knowledge of inshore and offshore fishing from NC to FL, including tides, 
