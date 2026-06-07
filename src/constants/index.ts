@@ -45,7 +45,7 @@ import Constants from 'expo-constants';
 const extra = Constants.expoConfig?.extra ?? {};
 
 export const API_KEYS = {
-  ANTHROPIC:     extra.ANTHROPIC_API_KEY     ?? '',
+  // ANTHROPIC key is backend-only — never read on the client (see reportService).
   OPENWEATHER:   extra.OPENWEATHER_API_KEY   ?? '',
   SUPABASE_URL:  extra.SUPABASE_URL          ?? '',
   SUPABASE_ANON: extra.SUPABASE_ANON_KEY     ?? '',
@@ -60,8 +60,7 @@ export const API_ENDPOINTS = {
   NOAA_NDBC:     'https://www.ndbc.noaa.gov/data/realtime2',
   // OpenWeather
   OPENWEATHER:   'https://api.openweathermap.org/data/2.5',
-  // Anthropic Claude
-  ANTHROPIC:     'https://api.anthropic.com/v1/messages',
+  // NOTE: Anthropic is called only from the Railway backend, never the client.
 } as const;
 
 // ── NOAA Tide Stations ───────────────────────
@@ -86,7 +85,7 @@ export const NOAA_BUOYS = {
 // ── Claude API Config ────────────────────────
 export const CLAUDE_CONFIG = {
   MODEL:          'claude-sonnet-4-6',
-  MAX_TOKENS:     4096,
+  MAX_TOKENS:     8192,
   SYSTEM_PROMPT: `You are NGN Fishing — an elite AI fishing guide for the Southeast USA coast. 
 You have deep knowledge of inshore and offshore fishing from NC to FL, including tides, 
 species behavior, local regulations, tackle, and GPS waypoints. 

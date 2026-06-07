@@ -62,7 +62,8 @@ module.exports = {
     },
     extra: {
       OPENWEATHER_API_KEY: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY ?? '',
-      ANTHROPIC_API_KEY: process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '',
+      // ANTHROPIC key is intentionally NOT exposed to the client — it lives only
+      // on the Railway backend. All Claude calls proxy through /api/generate-report.
       SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',

@@ -3,8 +3,7 @@
 // Uses Claude API to generate structured fishing reports
 // ─────────────────────────────────────────────
 
-import { Platform } from 'react-native';
-import { API_ENDPOINTS, API_KEYS, CLAUDE_CONFIG } from '@constants/index';
+import { CLAUDE_CONFIG } from '@constants/index';
 import type { WizardDraft, LiveConditions, FishingReport } from '@app-types/index';
 import { INSHORE_SPECIES, OFFSHORE_SPECIES, LIVE_BAIT, FROZEN_BAIT, ARTIFICIAL_BAIT } from '@constants/index';
 import 'react-native-get-random-values';
@@ -184,42 +183,47 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
 }
 
 // ── Call Claude API ───────────────────────────
-// On web: proxies through Railway backend (avoids CORS + keeps key server-side)
-// On native: calls Anthropic API directly
+// ALL platforms (web + native) proxy through the Railway backend.
+// This keeps the Anthropic API key server-side (never shipped in the app
+// binary — required for App Store + basic security) and lets the backend
+// own the model name, so a stale client can never pin a deprecated model
+// and trigger a 404 from Anthropic.
 async function callClaude(userPrompt: string): Promise<string> {
   let res: Response;
-
-  if (Platform.OS === 'web') {
+  try {
     res = await fetch(`${BACKEND_URL}/api/generate-report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt:     userPrompt,
         system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
-        model:      CLAUDE_CONFIG.MODEL,
         max_tokens: REPORT_MAX_TOKENS,
+        // NOTE: model is intentionally NOT sent — the backend is the single
+        // source of truth for which Claude model to use.
       }),
     });
-  } else {
-    res = await fetch(API_ENDPOINTS.ANTHROPIC, {
-      method: 'POST',
-      headers: {
-        'Content-Type':      'application/json',
-        'x-api-key':         API_KEYS.ANTHROPIC,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model:      CLAUDE_CONFIG.MODEL,
-        max_tokens: REPORT_MAX_TOKENS,
-        system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
-        messages:   [{ role: 'user', content: userPrompt }],
-      }),
-    });
+  } catch (networkErr: any) {
+    throw new Error(
+      `Couldn't reach the report server (${BACKEND_URL}). ` +
+      `Check your connection and try again. (${networkErr?.message ?? 'network error'})`
+    );
   }
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${err}`);
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body?.error || body?.message || JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => '');
+    }
+    if (res.status === 404) {
+      throw new Error(
+        `Report service returned 404 — the report endpoint wasn't found at ${BACKEND_URL}/api/generate-report. ` +
+        `This usually means the backend isn't deployed or BACKEND_URL points at the wrong host. ${detail}`
+      );
+    }
+    throw new Error(`Report service error ${res.status}: ${detail}`);
   }
 
   const data = await res.json();

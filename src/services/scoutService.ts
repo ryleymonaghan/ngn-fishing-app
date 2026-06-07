@@ -5,8 +5,7 @@
 // channels, and ledges near a user's pinned location.
 // ─────────────────────────────────────────────
 
-import { Platform } from 'react-native';
-import { API_ENDPOINTS, API_KEYS, CLAUDE_CONFIG } from '@constants/index';
+import { CLAUDE_CONFIG } from '@constants/index';
 import Constants from 'expo-constants';
 
 const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app';
@@ -73,39 +72,34 @@ Return 4-8 results — only the best spots worth visiting. Skip directions with 
 
 // ── Call Claude for Scout ─────────────────────
 async function callClaudeScout(prompt: string): Promise<string> {
+  // ALL platforms proxy through the Railway backend — keeps the Anthropic key
+  // server-side and lets the backend own the model name (no stale-client 404s).
   let res: Response;
-
-  if (Platform.OS === 'web') {
+  try {
     res = await fetch(`${BACKEND_URL}/api/generate-report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
         system: `${CLAUDE_CONFIG.SYSTEM_PROMPT} You are now in STRUCTURE SCOUT mode. Analyze GPS coordinates and identify nearby underwater structure, depth changes, and hidden fishing spots. Use real locations only.`,
-        model: CLAUDE_CONFIG.MODEL,
         max_tokens: 4096,
       }),
     });
-  } else {
-    res = await fetch(API_ENDPOINTS.ANTHROPIC, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEYS.ANTHROPIC,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: CLAUDE_CONFIG.MODEL,
-        max_tokens: 4096,
-        system: `${CLAUDE_CONFIG.SYSTEM_PROMPT} You are now in STRUCTURE SCOUT mode. Analyze GPS coordinates and identify nearby underwater structure, depth changes, and hidden fishing spots. Use real locations only.`,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+  } catch (networkErr: any) {
+    throw new Error(
+      `Couldn't reach the scout server (${BACKEND_URL}). Check your connection. (${networkErr?.message ?? 'network error'})`
+    );
   }
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Scout API error ${res.status}: ${err}`);
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body?.error || body?.message || JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => '');
+    }
+    throw new Error(`Scout API error ${res.status}: ${detail}`);
   }
 
   const data = await res.json();
