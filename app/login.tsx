@@ -91,11 +91,10 @@ export default function LoginScreen() {
               <Text style={s.tierDetail}>• 3-day forecast dashboard</Text>
               <Text style={s.tierDetail}>• Live tides, weather, solunar</Text>
               <Text style={s.tierDetail}>• Species probability ratings</Text>
-              <Text style={s.tierDetail}>• Catch photo sharing with NGN branding</Text>
-              <Text style={s.tierDetailMuted}>• Full AI reports — ${PRICING.SINGLE_REPORT} each</Text>
+              <Text style={s.tierDetail}>• 3 free AI reports to start</Text>
             </View>
 
-            {/* ── Pro ── */}
+            {/* ── Pro Monthly ── */}
             <TouchableOpacity
               style={[s.tierCard, s.tierCardPro]}
               onPress={() => handleUpgrade('pro_monthly')}
@@ -105,7 +104,7 @@ export default function LoginScreen() {
               <View style={s.tierHeader}>
                 <View>
                   <Text style={s.tierNamePro}>PRO</Text>
-                  <Text style={s.tierBadge}>MOST POPULAR</Text>
+                  <Text style={s.tierBadge}>MONTHLY</Text>
                 </View>
                 <View style={s.tierPriceBlock}>
                   <Text style={s.tierPricePro}>${PRICING.PRO_MONTHLY}</Text>
@@ -118,41 +117,36 @@ export default function LoginScreen() {
                 <>
                   <Text style={s.tierDetailPro}>• Unlimited AI fishing reports</Text>
                   <Text style={s.tierDetailPro}>• GPS spot coordinates + navigation</Text>
-                  <Text style={s.tierDetailPro}>• Basic map with spot markers</Text>
+                  <Text style={s.tierDetailPro}>• Relief shading + NOAA charts</Text>
                   <Text style={s.tierDetailPro}>• Push alerts — tides, weather, move timing</Text>
-                  <Text style={s.tierDetailPro}>• Catch photo sharing with NGN branding</Text>
-                  <Text style={s.tierDetailMutedPro}>or ${PRICING.PRO_ANNUAL}/yr — save 33%</Text>
+                  <Text style={s.tierDetailPro}>• Prize giveaway entries via photo uploads</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* ── Pro Angler ── */}
+            {/* ── Pro Annual ── */}
             <TouchableOpacity
               style={[s.tierCard, s.tierCardAngler]}
-              onPress={() => handleUpgrade('angler_monthly')}
+              onPress={() => handleUpgrade('pro_annual')}
               activeOpacity={0.85}
               disabled={checkoutLoading !== null}
             >
               <View style={s.tierHeader}>
                 <View>
-                  <Text style={s.tierNameAngler}>PRO ANGLER</Text>
-                  <Text style={s.tierBadgeAngler}>ALL ACCESS</Text>
+                  <Text style={s.tierNameAngler}>PRO</Text>
+                  <Text style={s.tierBadgeAngler}>ANNUAL — SAVE 50%</Text>
                 </View>
                 <View style={s.tierPriceBlock}>
-                  <Text style={s.tierPriceAngler}>${PRICING.ANGLER_MONTHLY}</Text>
-                  <Text style={s.tierPricePerAngler}>/month</Text>
+                  <Text style={s.tierPriceAngler}>${PRICING.PRO_ANNUAL}</Text>
+                  <Text style={s.tierPricePerAngler}>/year</Text>
                 </View>
               </View>
-              {checkoutLoading === 'angler_monthly' ? (
+              {checkoutLoading === 'pro_annual' ? (
                 <ActivityIndicator color={COLORS.seafoam} style={{ marginTop: 12 }} />
               ) : (
                 <>
-                  <Text style={s.tierDetailAngler}>• Everything in Pro</Text>
-                  <Text style={s.tierDetailAngler}>• Full relief shading + NOAA bathymetry</Text>
-                  <Text style={s.tierDetailAngler}>• Depth contour overlays</Text>
-                  <Text style={s.tierDetailAngler}>• Offshore reef + structure layers</Text>
-                  <Text style={s.tierDetailAngler}>• Priority species intel updates</Text>
-                  <Text style={s.tierDetailMutedAngler}>or ${PRICING.ANGLER_ANNUAL}/yr — save 25%</Text>
+                  <Text style={s.tierDetailAngler}>• Everything in Pro Monthly</Text>
+                  <Text style={s.tierDetailAngler}>• Best value — $5/mo effective</Text>
                 </>
               )}
             </TouchableOpacity>

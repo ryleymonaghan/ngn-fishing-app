@@ -100,39 +100,32 @@ export const DEMO_ACCOUNTS: string[] = [
   'ryleymonaghan83@gmail.com',
 ];
 
-// ── Stripe Product IDs ───────────────────────
-// IMPORTANT: Replace these with real Stripe price IDs from your dashboard.
-// Stripe Dashboard → Products → NGN Pro → copy the price_xxx IDs
+// ── Stripe Product IDs (web checkout only — iOS uses RevenueCat) ──
+// TODO: Create new Stripe prices at $9.99/mo and $59.99/yr to match iOS.
+//       These legacy IDs charge the OLD prices and should NOT be used until updated.
 export const STRIPE_PRODUCTS = {
-  // Free tier — single report purchase
-  SINGLE_REPORT_PRICE_ID:    'price_1TL6rfHnXVDSXKsGphHctuq2',  // $9.99 one-time
-  // Pro tier
-  PRO_MONTHLY_PRICE_ID:      'price_1TL6tPHnXVDSXKsGk0o0FalY',  // $14.99/mo
-  PRO_ANNUAL_PRICE_ID:       'price_1TL6uKHnXVDSXKsGogRJsGXd',  // $119.99/yr
-  // Pro Angler tier
-  ANGLER_MONTHLY_PRICE_ID:   'price_1TL6vBHnXVDSXKsGsWFYwork',  // $19.99/mo
-  ANGLER_ANNUAL_PRICE_ID:    'price_1TL6voHnXVDSXKsGMXeu9NcI',  // $179.99/yr
+  PRO_MONTHLY_PRICE_ID:      'price_1TL6tPHnXVDSXKsGk0o0FalY',  // TODO: update to $9.99/mo
+  PRO_ANNUAL_PRICE_ID:       'price_1TL6uKHnXVDSXKsGogRJsGXd',  // TODO: update to $59.99/yr
 } as const;
 
+// ── Pricing (single source of truth) ────────
+// Two-product model: Pro Monthly + Pro Annual. No Angler tier, no single-report.
+// iOS product IDs: ngn_pro_monthly ($9.99) / ngn_pro_annual ($59.99)
 export const PRICING = {
-  SINGLE_REPORT:  9.99,
-  PRO_MONTHLY:    14.99,
-  PRO_ANNUAL:     119.99,
-  ANGLER_MONTHLY: 19.99,
-  ANGLER_ANNUAL:  179.99,
+  PRO_MONTHLY:    9.99,
+  PRO_ANNUAL:     59.99,
 } as const;
 
 // ── Feature gating helpers ──────────────────
-// Use these to check what a user's subscription unlocks
-export const ANGLER_TIERS = ['angler_monthly', 'angler_annual'] as const;
-export const PRO_TIERS    = ['pro_monthly', 'pro_annual', ...ANGLER_TIERS] as const;
+// Single tier: Pro. All paid subscribers get everything.
+export const PRO_TIERS = ['pro_monthly', 'pro_annual'] as const;
 
 export function isPro(tier?: string): boolean {
   return PRO_TIERS.includes(tier as any);
 }
-export function isAngler(tier?: string): boolean {
-  return ANGLER_TIERS.includes(tier as any);
-}
+
+// Legacy alias — Angler tier removed, all Pro users get full access
+export const isAngler = isPro;
 
 // ── Time Windows ─────────────────────────────
 export const TIME_WINDOWS = [

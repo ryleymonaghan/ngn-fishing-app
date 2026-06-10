@@ -108,7 +108,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Text style={s.freeStatus}>Free Tier</Text>
-              <Text style={s.freeDetail}>AI reports available for ${PRICING.SINGLE_REPORT} each</Text>
+              <Text style={s.freeDetail}>3 free reports included</Text>
               <View style={s.upgradeRow}>
                 <TouchableOpacity
                   style={s.upgradePill}
@@ -125,15 +125,15 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={[s.upgradePill, s.upgradePillBest]}
                   activeOpacity={0.8}
-                  onPress={() => handleUpgrade('angler_monthly')}
+                  onPress={() => handleUpgrade('pro_annual')}
                   disabled={checkoutLoading !== null}
                 >
-                  {checkoutLoading === 'angler_monthly' ? (
+                  {checkoutLoading === 'pro_annual' ? (
                     <ActivityIndicator color={COLORS.navy} size="small" />
                   ) : (
                     <>
-                      <Text style={s.upgradePillTextBest}>Pro Angler · ${PRICING.ANGLER_MONTHLY}/mo</Text>
-                      <Text style={s.saveBadge}>ALL ACCESS</Text>
+                      <Text style={s.upgradePillTextBest}>Pro · ${PRICING.PRO_ANNUAL}/yr</Text>
+                      <Text style={s.saveBadge}>SAVE 50%</Text>
                     </>
                   )}
                 </TouchableOpacity>

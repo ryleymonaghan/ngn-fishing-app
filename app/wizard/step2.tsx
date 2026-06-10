@@ -40,13 +40,9 @@ export default function WizardStep2() {
     if (!isPro) {
       Alert.alert(
         'Purchase Full Report',
-        `Free accounts include the fishing forecast. Full AI reports with GPS spots, species intel, and tactics are $${PRICING.SINGLE_REPORT} each — or subscribe for unlimited starting at $${PRICING.PRO_MONTHLY}/mo.`,
+        `Free accounts include 3 AI reports. Subscribe for unlimited reports, GPS navigation, relief shading, and move alerts starting at $${PRICING.PRO_MONTHLY}/mo.`,
         [
           { text: 'Maybe Later', style: 'cancel' },
-          {
-            text: `Buy Report · $${PRICING.SINGLE_REPORT}`,
-            onPress: () => startCheckout('single_report').catch(() => {}),
-          },
           {
             text: `Go Pro · $${PRICING.PRO_MONTHLY}/mo`,
             style: 'default',
