@@ -1,26 +1,16 @@
 {
-  "buildCommand": "npx expo export --platform web",
+  "buildCommand": "mkdir -p dist && cp -r public/* dist/",
   "outputDirectory": "dist",
   "framework": null,
   "functions": {
     "api/**/*.js": { "maxDuration": 30 }
   },
-  "redirects": [
-    { "source": "/", "destination": "/login", "permanent": false }
-  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/", "destination": "/index.html" },
     { "source": "/login", "destination": "/login.html" },
-    { "source": "/tabs", "destination": "/tabs.html" },
-    { "source": "/tabs/reports", "destination": "/tabs/reports.html" },
-    { "source": "/tabs/spots", "destination": "/tabs/spots.html" },
-    { "source": "/tabs/catches", "destination": "/tabs/catches.html" },
-    { "source": "/tabs/triplog", "destination": "/tabs/triplog.html" },
-    { "source": "/tabs/profile", "destination": "/tabs/profile.html" },
-    { "source": "/wizard/step1", "destination": "/wizard/step1.html" },
-    { "source": "/wizard/step2", "destination": "/wizard/step2.html" },
-    { "source": "/wizard/step3", "destination": "/wizard/step3.html" },
-    { "source": "/report/:id", "destination": "/report/[id].html" }
+    { "source": "/join", "destination": "/join.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" }
   ]
 }

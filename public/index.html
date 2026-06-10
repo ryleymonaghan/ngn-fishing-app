@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGN Fishing — No Guide Needed™</title>
+  <meta name="description" content="Your AI fishing guide for the Southeast coast. Less guessing. More catching.">
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy: #0A1628;
+      --navy-mid: #0F2035;
+      --navy-light: #132D4A;
+      --red: #E63946;
+      --blue: #1A2980;
+      --cyan: #00F0FF;
+      --seafoam: #4ECDC4;
+      --white: #F0F4F8;
+      --gray: #8899AA;
+      --gold: #F4A261;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ──────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(26,41,128,0.25) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(230,57,70,0.08) 0%, transparent 40%);
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-3%, 2%) rotate(1deg); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 720px;
+      width: 100%;
+    }
+
+    /* ── LOGO ─────────────────────────── */
+    .logo-container {
+      margin-bottom: 32px;
+    }
+
+    .logo-container img {
+      width: 220px;
+      height: auto;
+      filter: drop-shadow(0 0 40px rgba(230,57,70,0.15));
+    }
+
+    .brand-name {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 3.2rem;
+      letter-spacing: 0.3em;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .brand-sub {
+      font-family: 'Orbitron', monospace;
+      font-weight: 400;
+      font-size: 0.85rem;
+      letter-spacing: 0.5em;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .brand-tm {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: var(--seafoam);
+      opacity: 0.7;
+    }
+
+    /* ── MATRIX TYPING ────────────────── */
+    .matrix-block {
+      margin: 40px auto;
+      text-align: left;
+      max-width: 600px;
+      min-height: 180px;
+      position: relative;
+    }
+
+    .matrix-line {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.82rem;
+      line-height: 1.9;
+      color: var(--seafoam);
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      letter-spacing: 0.02em;
+    }
+
+    .matrix-line.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .matrix-line .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background: var(--seafoam);
+      margin-left: 2px;
+      animation: blink 0.7s step-end infinite;
+      vertical-align: text-bottom;
+    }
+
+    .matrix-line.accent { color: var(--gold); }
+    .matrix-line.bright { color: var(--white); font-weight: 600; }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ── CTA BUTTONS ──────────────────── */
+    .cta-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 48px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+    }
+
+    .cta-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .btn {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      padding: 16px 40px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--red);
+      color: white;
+      box-shadow: 0 4px 20px rgba(230,57,70,0.3);
+    }
+
+    .btn-primary:hover {
+      background: #FF4757;
+      box-shadow: 0 6px 30px rgba(230,57,70,0.45);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1.5px solid rgba(255,255,255,0.25);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--seafoam);
+      color: var(--seafoam);
+      transform: translateY(-2px);
+    }
+
+    /* ── FEATURES SECTION ─────────────── */
+    .features {
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .features-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.4em;
+      color: var(--gray);
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+      border: 1px solid rgba(78,205,196,0.1);
+      border-radius: 10px;
+      padding: 28px 24px;
+      text-align: center;
+      transition: border-color 0.3s ease, transform 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(78,205,196,0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--white);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .feature-desc {
+      font-size: 0.82rem;
+      color: var(--gray);
+      line-height: 1.5;
+    }
+
+    /* ── PRICING SECTION ──────────────── */
+    .pricing {
+      padding: 60px 24px 80px;
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .pricing-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.4em;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .pricing-cards {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .price-card {
+      background: var(--navy-mid);
+      border: 1px solid rgba(78,205,196,0.15);
+      border-radius: 10px;
+      padding: 28px 32px;
+      flex: 1;
+      min-width: 200px;
+      max-width: 280px;
+    }
+
+    .price-card.popular {
+      border-color: var(--seafoam);
+      box-shadow: 0 0 30px rgba(78,205,196,0.1);
+    }
+
+    .price-tier {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--seafoam);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .price-amount {
+      font-family: 'Orbitron', monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--white);
+    }
+
+    .price-period {
+      font-size: 0.8rem;
+      color: var(--gray);
+    }
+
+    .price-save {
+      font-size: 0.72rem;
+      color: var(--gold);
+      margin-top: 6px;
+    }
+
+    .price-note {
+      font-size: 0.78rem;
+      color: var(--gray);
+      margin-top: 28px;
+      line-height: 1.5;
+    }
+
+    .price-note strong {
+      color: var(--white);
+    }
+
+    /* ── FOOTER ────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .footer-text {
+      font-size: 0.72rem;
+      color: var(--gray);
+      letter-spacing: 0.05em;
+    }
+
+    .footer-links {
+      margin-top: 12px;
+    }
+
+    .footer-links a {
+      font-size: 0.72rem;
+      color: var(--gray);
+      text-decoration: none;
+      margin: 0 12px;
+    }
+
+    .footer-links a:hover {
+      color: var(--seafoam);
+    }
+
+    /* ── RESPONSIVE ────────────────────── */
+    @media (max-width: 600px) {
+      .brand-name { font-size: 2.2rem; letter-spacing: 0.2em; }
+      .matrix-line { font-size: 0.72rem; }
+      .cta-row { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 300px; text-align: center; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="logo-container">
+        <img src="/assets/logo-source.png" alt="NGN Fishing logo" onerror="this.style.display='none'">
+      </div>
+      <div class="brand-name">N G N</div>
+      <div class="brand-sub">F I S H I N G</div>
+      <div class="brand-tm">No Guide Needed™</div>
+
+      <div class="matrix-block" id="matrixBlock">
+        <!-- Lines injected by JS -->
+      </div>
+
+      <div class="cta-row" id="ctaRow">
+        <a href="/join" class="btn btn-primary">Join</a>
+        <a href="/login" class="btn btn-secondary">Login</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FEATURES ═══ -->
+  <section class="features">
+    <div class="features-label">What You Get</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <div class="feature-title">AI Reports</div>
+        <div class="feature-desc">GPS coordinates, species targets, rig setups, and a full day schedule — built from live data.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🗺️</span>
+        <div class="feature-title">Relief Shading</div>
+        <div class="feature-desc">GEBCO bathymetric terrain and NOAA charts. See the ocean floor like a pro.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📍</span>
+        <div class="feature-title">Navigation</div>
+        <div class="feature-desc">Tap any spot, get turn-by-turn. Waypoint-to-waypoint routing between honey holes.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🏪</span>
+        <div class="feature-title">Tackle Shop</div>
+        <div class="feature-desc">Curated gear matched to your report. Buy what you actually need for today's trip.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔔</span>
+        <div class="feature-title">Move Alerts</div>
+        <div class="feature-desc">Push notifications when the bite shifts. We tell you when to move and where to go next.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🏆</span>
+        <div class="feature-title">Prize Giveaways</div>
+        <div class="feature-desc">Upload your catch photos. Members are automatically entered into monthly prize drawings.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PRICING ═══ -->
+  <section class="pricing">
+    <div class="pricing-label">Simple Pricing</div>
+    <div class="pricing-cards">
+      <div class="price-card">
+        <div class="price-tier">Monthly</div>
+        <div class="price-amount">$9.99</div>
+        <div class="price-period">/month</div>
+      </div>
+      <div class="price-card popular">
+        <div class="price-tier">Annual</div>
+        <div class="price-amount">$59.99</div>
+        <div class="price-period">/year</div>
+        <div class="price-save">Save 50%</div>
+      </div>
+    </div>
+    <div class="price-note">
+      Start with <strong>3 free reports</strong>. No credit card required.<br>
+      A guided charter costs $400–$800. NGN Pro starts at $9.99/mo.
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div class="footer-text">© 2026 Oak Angel Digital LLC. All rights reserved.</div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+    </div>
+  </footer>
+
+  <script>
+    // ── Matrix typing animation ──────────────────
+    const lines = [
+      { text: '> Initializing NGN algorithm...', cls: '' },
+      { text: '> Pulling tides, wind, water temp, lunar cycles...', cls: '' },
+      { text: '> Cross-referencing species behavior patterns...', cls: '' },
+      { text: '> Generating your fishing schedule...', cls: 'accent' },
+      { text: '> Coordinates locked. Rig matched. Alerts armed.', cls: 'bright' },
+      { text: '> The algorithm tells you where to go, what to throw,', cls: '' },
+      { text: '  and when the bite is over — move to the next spot.', cls: '' },
+      { text: '> Tried. True. Tested.', cls: 'bright' },
+    ];
+
+    const block = document.getElementById('matrixBlock');
+    const ctaRow = document.getElementById('ctaRow');
+    let currentLine = 0;
+
+    function typeLine() {
+      if (currentLine >= lines.length) {
+        // Show CTA buttons after typing finishes
+        setTimeout(() => ctaRow.classList.add('visible'), 400);
+        return;
+      }
+
+      const { text, cls } = lines[currentLine];
+      const el = document.createElement('div');
+      el.className = 'matrix-line' + (cls ? ' ' + cls : '');
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'line-text';
+      const cursorSpan = document.createElement('span');
+      cursorSpan.className = 'cursor';
+
+      el.appendChild(textSpan);
+      el.appendChild(cursorSpan);
+      block.appendChild(el);
+
+      // Fade in the line
+      requestAnimationFrame(() => el.classList.add('visible'));
+
+      // Type characters one by one
+      let charIdx = 0;
+      const typeChar = () => {
+        if (charIdx < text.length) {
+          textSpan.textContent = text.slice(0, charIdx + 1);
+          charIdx++;
+          setTimeout(typeChar, 18 + Math.random() * 22);
+        } else {
+          // Remove cursor from this line, move to next
+          cursorSpan.remove();
+          currentLine++;
+          setTimeout(typeLine, 300);
+        }
+      };
+      setTimeout(typeChar, 150);
+    }
+
+    // Start after a brief pause
+    setTimeout(typeLine, 600);
+  </script>
+</body>
+</html>

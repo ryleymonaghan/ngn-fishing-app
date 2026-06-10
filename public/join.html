@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join NGN Fishing — No Guide Needed</title>
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy: #0A1628;
+      --navy-mid: #0F2035;
+      --navy-light: #132D4A;
+      --red: #E63946;
+      --seafoam: #4ECDC4;
+      --white: #F0F4F8;
+      --gray: #8899AA;
+      --gray-light: #B8C4D0;
+      --gold: #F4A261;
+      --input-bg: #0D1E33;
+      --input-border: rgba(78,205,196,0.15);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(26,41,128,0.2) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(230,57,70,0.06) 0%, transparent 40%);
+      z-index: 0;
+    }
+
+    .wizard {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
+      padding: 24px;
+    }
+
+    /* ── PROGRESS BAR ────────────────── */
+    .progress-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 32px;
+    }
+
+    .progress-seg {
+      flex: 1;
+      height: 3px;
+      background: rgba(78,205,196,0.12);
+      border-radius: 2px;
+      transition: background 0.4s ease;
+    }
+
+    .progress-seg.active {
+      background: var(--seafoam);
+    }
+
+    .progress-seg.done {
+      background: var(--seafoam);
+      opacity: 0.5;
+    }
+
+    /* ── STEP CONTAINER ──────────────── */
+    .steps-viewport {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .step {
+      display: none;
+      animation: fadeUp 0.35s ease forwards;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── STEP HEADER ─────────────────── */
+    .step-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: var(--seafoam);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .step-q {
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--white);
+      line-height: 1.4;
+      margin-bottom: 28px;
+    }
+
+    /* ── INPUTS ───────────────────────── */
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-light);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--seafoam);
+      box-shadow: 0 0 0 3px rgba(78,205,196,0.1);
+    }
+
+    .field input::placeholder { color: rgba(136,153,170,0.5); }
+
+    .field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238899AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .field select option {
+      background: var(--navy-mid);
+      color: var(--white);
+    }
+
+    /* ── OPTION CARDS (fishing style, boat) */
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .opt-card {
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 10px;
+      padding: 18px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .opt-card:hover {
+      border-color: rgba(78,205,196,0.35);
+    }
+
+    .opt-card.selected {
+      border-color: var(--seafoam);
+      background: rgba(78,205,196,0.06);
+    }
+
+    .opt-icon {
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .opt-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+
+    /* ── BUTTONS ──────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 14px 28px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .btn-next {
+      flex: 1;
+      background: var(--red);
+      color: white;
+      box-shadow: 0 4px 16px rgba(230,57,70,0.25);
+    }
+
+    .btn-next:hover {
+      background: #FF4757;
+      transform: translateY(-1px);
+    }
+
+    .btn-next:disabled {
+      background: var(--navy-light);
+      box-shadow: none;
+      cursor: not-allowed;
+      color: var(--gray);
+    }
+
+    .btn-back {
+      background: transparent;
+      color: var(--gray);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 14px 20px;
+    }
+
+    .btn-back:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: var(--white);
+    }
+
+    .btn-skip {
+      background: transparent;
+      color: var(--gray);
+      border: 1px solid rgba(255,255,255,0.1);
+      flex: 1;
+    }
+
+    .btn-skip:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: var(--white);
+    }
+
+    /* ── PRICING CARDS (step 5) ───────── */
+    .plan-cards {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .plan-card {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 10px;
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .plan-card:hover {
+      border-color: rgba(78,205,196,0.35);
+    }
+
+    .plan-card.selected {
+      border-color: var(--seafoam);
+      background: rgba(78,205,196,0.06);
+    }
+
+    .plan-badge {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--seafoam);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .plan-price {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--white);
+    }
+
+    .plan-period {
+      font-size: 0.75rem;
+      color: var(--gray);
+      margin-top: 2px;
+    }
+
+    .plan-save {
+      font-size: 0.68rem;
+      color: var(--gold);
+      margin-top: 6px;
+    }
+
+    .free-report-note {
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--gray-light);
+      margin: 16px 0 8px;
+      line-height: 1.5;
+    }
+
+    .free-report-note strong {
+      color: var(--white);
+    }
+
+    .btn-free {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1.5px solid var(--seafoam);
+      color: var(--seafoam);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-free:hover {
+      background: rgba(78,205,196,0.08);
+    }
+
+    .divider-or {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--gray);
+      margin: 16px 0;
+      position: relative;
+    }
+
+    .divider-or::before, .divider-or::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .divider-or::before { left: 0; }
+    .divider-or::after { right: 0; }
+
+    /* ── HAVE ACCOUNT ────────────────── */
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.78rem;
+      color: var(--gray);
+    }
+
+    .login-link a {
+      color: var(--seafoam);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* ── RESPONSIVE ───────────────────── */
+    @media (max-width: 480px) {
+      .wizard { padding: 16px; }
+      .step-q { font-size: 1.15rem; }
+      .plan-cards { flex-direction: column; }
+      .option-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wizard">
+    <!-- PROGRESS -->
+    <div class="progress-bar">
+      <div class="progress-seg active" id="seg1"></div>
+      <div class="progress-seg" id="seg2"></div>
+      <div class="progress-seg" id="seg3"></div>
+      <div class="progress-seg" id="seg4"></div>
+      <div class="progress-seg" id="seg5"></div>
+    </div>
+
+    <div class="steps-viewport">
+
+      <!-- ═══ STEP 1 — NAME ═══ -->
+      <div class="step active" id="step1">
+        <div class="step-num">Step 1 of 5</div>
+        <div class="step-q">What's your name?</div>
+        <div class="field">
+          <label for="firstName">First name</label>
+          <input type="text" id="firstName" placeholder="First name" autofocus>
+        </div>
+        <div class="field">
+          <label for="lastName">Last name</label>
+          <input type="text" id="lastName" placeholder="Last name">
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="your@email.com">
+        </div>
+        <div class="field">
+          <label for="signupPw">Password</label>
+          <input type="password" id="signupPw" placeholder="Create a password (8+ characters)">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-next" onclick="goStep(2)">Continue</button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 2 — ADDRESS ═══ -->
+      <div class="step" id="step2">
+        <div class="step-num">Step 2 of 5</div>
+        <div class="step-q">Where are you fishing from?</div>
+        <div class="field">
+          <label for="city">City</label>
+          <input type="text" id="city" placeholder="Charleston">
+        </div>
+        <div class="field">
+          <label for="state">State</label>
+          <select id="state">
+            <option value="">Select state</option>
+            <option value="SC">South Carolina</option>
+            <option value="NC">North Carolina</option>
+            <option value="GA">Georgia</option>
+            <option value="FL">Florida</option>
+            <option value="VA">Virginia</option>
+            <option value="AL">Alabama</option>
+            <option value="MS">Mississippi</option>
+            <option value="LA">Louisiana</option>
+            <option value="TX">Texas</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="zip">Zip code</label>
+          <input type="text" id="zip" placeholder="29401" maxlength="5" inputmode="numeric">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-back" onclick="goStep(1)">&larr;</button>
+          <button class="btn btn-next" onclick="goStep(3)">Continue</button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 3 — FISHING STYLE ═══ -->
+      <div class="step" id="step3">
+        <div class="step-num">Step 3 of 5</div>
+        <div class="step-q">How do you fish?</div>
+        <div class="option-grid" id="styleGrid">
+          <div class="opt-card" data-value="inshore" onclick="selectStyle(this)">
+            <span class="opt-icon">🏖️</span>
+            <span class="opt-label">Inshore</span>
+          </div>
+          <div class="opt-card" data-value="offshore" onclick="selectStyle(this)">
+            <span class="opt-icon">🌊</span>
+            <span class="opt-label">Offshore</span>
+          </div>
+          <div class="opt-card" data-value="shore" onclick="selectStyle(this)">
+            <span class="opt-icon">🎣</span>
+            <span class="opt-label">Shore</span>
+          </div>
+          <div class="opt-card" data-value="kayak" onclick="selectStyle(this)">
+            <span class="opt-icon">🛶</span>
+            <span class="opt-label">Kayak</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-back" onclick="goStep(2)">&larr;</button>
+          <button class="btn btn-next" id="step3Next" onclick="goStep(4)" disabled>Continue</button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 4 — BOAT ═══ -->
+      <div class="step" id="step4">
+        <div class="step-num">Step 4 of 5</div>
+        <div class="step-q">Tell us about your boat</div>
+        <div class="field">
+          <label for="boatSize">Length (feet)</label>
+          <input type="text" id="boatSize" placeholder="21" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="boatType">Boat type</label>
+          <select id="boatType">
+            <option value="">Select type</option>
+            <option value="bay">Bay Boat</option>
+            <option value="flats">Flats / Skiff</option>
+            <option value="center-console">Center Console</option>
+            <option value="deep-v">Deep V</option>
+            <option value="sport-fisher">Sport Fisher</option>
+            <option value="catamaran">Catamaran</option>
+            <option value="pontoon">Pontoon</option>
+            <option value="jon">Jon Boat</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-back" onclick="goStep(3)">&larr;</button>
+          <button class="btn btn-skip" onclick="goStep(5)">No Boat — Skip</button>
+          <button class="btn btn-next" onclick="goStep(5)">Continue</button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 5 — SUBSCRIPTION ═══ -->
+      <div class="step" id="step5">
+        <div class="step-num">Step 5 of 5</div>
+        <div class="step-q">Choose your plan</div>
+
+        <button class="btn-free" onclick="handleFreeReport()">
+          Generate 1 Free Report
+        </button>
+
+        <div class="divider-or">or go unlimited</div>
+
+        <div class="plan-cards">
+          <div class="plan-card" data-plan="monthly" onclick="selectPlan(this)">
+            <div class="plan-badge">Monthly</div>
+            <div class="plan-price">$9.99</div>
+            <div class="plan-period">per month</div>
+          </div>
+          <div class="plan-card selected" data-plan="annual" onclick="selectPlan(this)">
+            <div class="plan-badge">Annual — Best Value</div>
+            <div class="plan-price">$59.99</div>
+            <div class="plan-period">per year</div>
+            <div class="plan-save">Save 50%</div>
+          </div>
+        </div>
+
+        <div class="free-report-note">
+          All plans include <strong>unlimited reports</strong>, relief shading, GPS navigation, move alerts, and automatic entry into monthly prize giveaways.
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-back" onclick="goStep(4)">&larr;</button>
+          <button class="btn btn-next" onclick="handleSubscribe()">Start Fishing</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="login-link">
+      Already have an account? <a href="/login">Login</a>
+    </div>
+  </div>
+
+  <script>
+    // ── State ────────────────────────────
+    const formData = {
+      firstName: '', lastName: '', email: '', password: '',
+      city: '', state: '', zip: '',
+      fishingStyle: '',
+      boatSize: '', boatType: '',
+      plan: 'annual'
+    };
+    let currentStep = 1;
+
+    // ── Navigation ──────────────────────
+    function goStep(n) {
+      // Save current step data
+      saveStepData();
+
+      // Validate
+      if (n > currentStep && !validateStep(currentStep)) return;
+
+      // Hide current
+      document.getElementById('step' + currentStep).classList.remove('active');
+
+      // Show next
+      currentStep = n;
+      document.getElementById('step' + currentStep).classList.add('active');
+
+      // Update progress bar
+      for (let i = 1; i <= 5; i++) {
+        const seg = document.getElementById('seg' + i);
+        seg.className = 'progress-seg';
+        if (i < currentStep) seg.classList.add('done');
+        if (i === currentStep) seg.classList.add('active');
+      }
+
+      // Focus first input in new step
+      const firstInput = document.querySelector('#step' + currentStep + ' input, #step' + currentStep + ' select');
+      if (firstInput) setTimeout(() => firstInput.focus(), 100);
+    }
+
+    // ── Validation ──────────────────────
+    function validateStep(step) {
+      if (step === 1) {
+        const first = document.getElementById('firstName').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
+        const pw = document.getElementById('signupPw').value;
+        if (!first) { shake('firstName'); return false; }
+        if (!email || !email.includes('@')) { shake('signupEmail'); return false; }
+        if (pw.length < 8) { shake('signupPw'); return false; }
+        return true;
+      }
+      if (step === 2) {
+        const city = document.getElementById('city').value.trim();
+        const state = document.getElementById('state').value;
+        if (!city) { shake('city'); return false; }
+        if (!state) { shake('state'); return false; }
+        return true;
+      }
+      if (step === 3) {
+        return !!formData.fishingStyle;
+      }
+      return true;
+    }
+
+    function shake(id) {
+      const el = document.getElementById(id);
+      el.style.borderColor = 'var(--red)';
+      el.style.animation = 'shake 0.4s ease';
+      el.focus();
+      setTimeout(() => {
+        el.style.borderColor = '';
+        el.style.animation = '';
+      }, 600);
+    }
+
+    // ── Save data ───────────────────────
+    function saveStepData() {
+      formData.firstName = document.getElementById('firstName').value.trim();
+      formData.lastName = document.getElementById('lastName').value.trim();
+      formData.email = document.getElementById('signupEmail').value.trim();
+      formData.password = document.getElementById('signupPw').value;
+      formData.city = document.getElementById('city').value.trim();
+      formData.state = document.getElementById('state').value;
+      formData.zip = document.getElementById('zip').value.trim();
+      formData.boatSize = document.getElementById('boatSize').value.trim();
+      formData.boatType = document.getElementById('boatType').value;
+    }
+
+    // ── Fishing style selection ─────────
+    function selectStyle(card) {
+      document.querySelectorAll('#styleGrid .opt-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      formData.fishingStyle = card.dataset.value;
+      document.getElementById('step3Next').disabled = false;
+    }
+
+    // ── Plan selection ──────────────────
+    function selectPlan(card) {
+      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      formData.plan = card.dataset.plan;
+    }
+
+    // ── Free report ─────────────────────
+    async function handleFreeReport() {
+      saveStepData();
+      if (!formData.email || !formData.password) {
+        alert('Please complete steps 1-2 first.');
+        goStep(1);
+        return;
+      }
+
+      // TODO: Create account in Supabase, then redirect to report wizard
+      console.log('Creating free account:', formData);
+      alert('Account created! Redirecting to your free report...');
+      window.location.href = '/tabs/reports';
+    }
+
+    // ── Subscribe ───────────────────────
+    async function handleSubscribe() {
+      saveStepData();
+      if (!formData.email || !formData.password) {
+        alert('Please complete steps 1-2 first.');
+        goStep(1);
+        return;
+      }
+
+      // TODO: Create account, then launch Stripe/RevenueCat checkout
+      console.log('Creating account + checkout:', formData);
+
+      // Determine price tier
+      const tier = formData.plan === 'annual' ? 'pro_annual' : 'pro_monthly';
+
+      try {
+        // Step 1: Create Supabase account
+        // Step 2: Start checkout
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priceId: tier === 'pro_annual'
+              ? 'price_ANNUAL_ID'  // TODO: Replace with real Stripe price ID
+              : 'price_MONTHLY_ID',
+            customerEmail: formData.email,
+            successUrl: window.location.origin + '/tabs?welcome=1',
+            cancelUrl: window.location.origin + '/join',
+          }),
+        });
+
+        if (res.ok) {
+          const { url } = await res.json();
+          if (url) window.location.href = url;
+        } else {
+          alert('Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Connection error. Please try again.');
+      }
+    }
+
+    // ── Shake animation ─────────────────
+    const shakeStyle = document.createElement('style');
+    shakeStyle.textContent = `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-6px); }
+        40% { transform: translateX(6px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+      }
+    `;
+    document.head.appendChild(shakeStyle);
+
+    // ── Enter key to advance ────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && currentStep < 5) {
+        e.preventDefault();
+        goStep(currentStep + 1);
+      }
+    });
+  </script>
+</body>
+</html>

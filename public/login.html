@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — NGN Fishing</title>
+  <link rel="icon" type="image/png" href="/assets/icon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy: #0A1628;
+      --navy-mid: #0F2035;
+      --navy-light: #132D4A;
+      --red: #E63946;
+      --cyan: #00F0FF;
+      --seafoam: #4ECDC4;
+      --white: #F0F4F8;
+      --gray: #8899AA;
+      --gray-light: #B8C4D0;
+      --gold: #F4A261;
+      --input-bg: #0D1E33;
+      --input-border: rgba(78,205,196,0.15);
+      --input-focus: rgba(78,205,196,0.4);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(26,41,128,0.2) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(230,57,70,0.06) 0%, transparent 40%);
+      z-index: 0;
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-3%, 2%) rotate(1deg); }
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+    }
+
+    /* ── LOGO ─────────────────────────── */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-area img {
+      width: 120px;
+      height: auto;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 0 30px rgba(230,57,70,0.12));
+    }
+
+    .logo-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.6rem;
+      letter-spacing: 0.25em;
+      color: var(--white);
+    }
+
+    .logo-sub {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.5em;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── CARD ─────────────────────────── */
+    .login-card {
+      background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      padding: 32px 28px;
+    }
+
+    .card-heading {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* ── FORM ─────────────────────────── */
+    .field {
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--gray-light);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-wrap input::placeholder {
+      color: rgba(136,153,170,0.5);
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--seafoam);
+      box-shadow: 0 0 0 3px rgba(78,205,196,0.1);
+    }
+
+    /* ── SHOW PASSWORD TOGGLE ────────── */
+    .toggle-pw {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gray);
+      font-size: 0.75rem;
+      font-family: 'Orbitron', monospace;
+      letter-spacing: 0.05em;
+      transition: color 0.2s ease;
+    }
+
+    .toggle-pw:hover {
+      color: var(--seafoam);
+    }
+
+    /* ── REMEMBER ME ─────────────────── */
+    .options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .remember-me input[type="checkbox"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--input-border);
+      border-radius: 4px;
+      background: var(--input-bg);
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .remember-me input[type="checkbox"]:checked {
+      background: var(--seafoam);
+      border-color: var(--seafoam);
+    }
+
+    .remember-me input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: solid var(--navy);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .remember-me span {
+      font-size: 0.78rem;
+      color: var(--gray-light);
+    }
+
+    .forgot-link {
+      font-size: 0.78rem;
+      color: var(--seafoam);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+    }
+
+    .forgot-link:hover {
+      opacity: 1;
+    }
+
+    /* ── SUBMIT ───────────────────────── */
+    .btn-login {
+      width: 100%;
+      padding: 16px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(230,57,70,0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-login:hover {
+      background: #FF4757;
+      box-shadow: 0 6px 30px rgba(230,57,70,0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    .btn-login:disabled {
+      background: var(--navy-light);
+      box-shadow: none;
+      cursor: not-allowed;
+      color: var(--gray);
+    }
+
+    .error-msg {
+      display: none;
+      font-size: 0.78rem;
+      color: var(--red);
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 10px;
+      background: rgba(230,57,70,0.08);
+      border-radius: 6px;
+      border: 1px solid rgba(230,57,70,0.2);
+    }
+
+    .error-msg.visible {
+      display: block;
+    }
+
+    .loading-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── SIGN UP LINK ────────────────── */
+    .signup-row {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .signup-row span {
+      font-size: 0.82rem;
+      color: var(--gray);
+    }
+
+    .signup-row a {
+      color: var(--seafoam);
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 4px;
+    }
+
+    .signup-row a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── BACK LINK ────────────────────── */
+    .back-home {
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    .back-home a {
+      font-size: 0.72rem;
+      color: var(--gray);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+
+    .back-home a:hover {
+      color: var(--white);
+    }
+
+    /* ── RESPONSIVE ────────────────────── */
+    @media (max-width: 480px) {
+      .login-container { padding: 16px; }
+      .login-card { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="logo-area">
+      <img src="/assets/logo-source.png" alt="NGN Fishing" onerror="this.style.display='none'">
+      <div class="logo-title">N G N</div>
+      <div class="logo-sub">F I S H I N G</div>
+    </div>
+
+    <div class="login-card">
+      <div class="card-heading">Welcome Back</div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label for="email">Email</label>
+          <div class="input-wrap">
+            <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="toggle-pw" id="togglePw" onclick="togglePassword()">SHOW</button>
+          </div>
+        </div>
+
+        <div class="options-row">
+          <label class="remember-me">
+            <input type="checkbox" id="rememberMe">
+            <span>Remember me</span>
+          </label>
+          <a href="#" class="forgot-link" onclick="handleForgot(event)">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span id="btnText">Login</span>
+          <div class="loading-spinner" id="spinner"></div>
+        </button>
+      </form>
+    </div>
+
+    <div class="signup-row">
+      <span>Don't have an account?</span>
+      <a href="/join">Join NGN</a>
+    </div>
+
+    <div class="back-home">
+      <a href="/">&larr; Back to Home</a>
+    </div>
+  </div>
+
+  <script>
+    // ── Toggle password visibility ──────
+    function togglePassword() {
+      const pw = document.getElementById('password');
+      const btn = document.getElementById('togglePw');
+      if (pw.type === 'password') {
+        pw.type = 'text';
+        btn.textContent = 'HIDE';
+      } else {
+        pw.type = 'password';
+        btn.textContent = 'SHOW';
+      }
+    }
+
+    // ── Remember me — persist email ─────
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('ngn_remember_email');
+      if (saved) {
+        document.getElementById('email').value = saved;
+        document.getElementById('rememberMe').checked = true;
+      }
+    });
+
+    // ── Handle login ────────────────────
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const remember = document.getElementById('rememberMe').checked;
+      const errorEl = document.getElementById('errorMsg');
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+
+      // Reset error state
+      errorEl.classList.remove('visible');
+
+      // Remember me
+      if (remember) {
+        localStorage.setItem('ngn_remember_email', email);
+      } else {
+        localStorage.removeItem('ngn_remember_email');
+      }
+
+      // Show loading state
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+      btn.disabled = true;
+
+      try {
+        // TODO: Replace with actual Supabase auth call
+        // For now, redirect to the app
+        const SUPABASE_URL = 'https://YOUR_SUPABASE_URL.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error_description || body.msg || 'Invalid email or password');
+        }
+
+        const data = await res.json();
+        // Store tokens
+        localStorage.setItem('ngn_access_token', data.access_token);
+        localStorage.setItem('ngn_refresh_token', data.refresh_token);
+
+        // Redirect to app
+        window.location.href = '/tabs';
+      } catch (err) {
+        errorEl.textContent = err.message || 'Login failed. Please try again.';
+        errorEl.classList.add('visible');
+      } finally {
+        btnText.style.display = 'block';
+        spinner.style.display = 'none';
+        btn.disabled = false;
+      }
+    }
+
+    // ── Forgot password ─────────────────
+    function handleForgot(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      if (!email) {
+        const errorEl = document.getElementById('errorMsg');
+        errorEl.textContent = 'Enter your email first, then tap Forgot password.';
+        errorEl.classList.add('visible');
+        return;
+      }
+      // TODO: Wire to Supabase password reset
+      alert('Password reset link sent to ' + email);
+    }
+  </script>
+</body>
+</html>
