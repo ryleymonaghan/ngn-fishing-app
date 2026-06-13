@@ -82,7 +82,7 @@ export default function CommunityScreen() {
   const handleUpgrade = async () => {
     setCheckoutLoading(true);
     try {
-      await startCheckout('angler_monthly', user?.email);
+      await startCheckout('pro_monthly', user?.email);
     } catch (err: any) {
       Alert.alert('Checkout Error', err.message);
     } finally {
