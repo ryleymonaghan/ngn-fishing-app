@@ -452,8 +452,8 @@
       try {
         // TODO: Replace with actual Supabase auth call
         // For now, redirect to the app
-        const SUPABASE_URL = 'https://YOUR_SUPABASE_URL.supabase.co';
-        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+        const SUPABASE_URL = 'https://dauvjyaqbjaatrvurfex.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdXZqeWFxYmphYXRydnVyZmV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MTc2NzYsImV4cCI6MjA5MDk5MzY3Nn0.r86ThryNE2w7_tR1ylKCyf8F2vFf1gw9Tgq5e_EvBdA';
 
         const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
