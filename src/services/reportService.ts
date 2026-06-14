@@ -13,9 +13,9 @@ import Constants from 'expo-constants';
 const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app';
 
 // ── Tuned token limit ────────────────────────────
-// A 3-species report with GPS spots, rigs, schedule, and pro tips
-// runs 5,000–8,000 tokens. 4096 was truncating mid-JSON.
-const REPORT_MAX_TOKENS = 8192;
+// Gold-standard reports with anchor pins, troll routes, coaching,
+// and 6-8 spots per species run 8,000–12,000 tokens.
+const REPORT_MAX_TOKENS = 12288;
 
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
@@ -110,20 +110,36 @@ Tide: ${tideInfo}.
 Weather: ${weatherInfo}.
 Solunar rating: ${conditions.solunar.label} (${conditions.solunar.rating}/100). Major periods: ${conditions.solunar.majorPeriods.join(', ')}.${offshoreContext}${deliveryContext}${shoreContext}${kayakContext}
 
-Generate a complete fishing report. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions — the angler has NOT pre-selected bait. Use only REAL, known GPS coordinates for ${fishingLocationLabel} and surrounding SE USA waters.
+Generate a COMPLETE GAME PLAN — not just a list of spots, but a full day strategy like a charter captain would build. Recommend the best bait (live, frozen, and artificial options) for each species based on today's conditions.
+
+Use only REAL, known GPS coordinates for ${fishingLocationLabel} and surrounding SE USA waters (SCDNR artificial reefs, NOAA charts, known ledges/wrecks, documented structure).
 
 CRITICAL GPS COORDINATE RULES:
 - Provide 6 to 8 GPS spots per species — NOT just one or two.
 - SPREAD spots across a 0.5–2 mile radius around each prime area so boats don't stack up on one location.
 - Each spot must have UNIQUE coordinates — no duplicates. Vary lat/lng by at least 0.002 degrees (~200 yards).
 - Include a mix of primary honey holes AND secondary/tertiary spots nearby.
-- Label spots clearly: "Spot A — Main Channel Drop", "Spot B — Oyster Bar NE Side", etc.
-- For each spot, note the best approach angle and where to anchor/position relative to the structure.
+- Name spots like chartplotter waypoints: "REEF-MAIN", "LEDGE-SE", "ANCHOR-EBB", "BAIT-SEARCH" — not generic labels.
+- For each spot: approach angle, anchor position relative to structure, and drift direction based on today's wind/current.
+
+ANCHOR PIN RULES:
+- For structure fishing: compute TWO anchor pins (one for ebb current, one for flood) so the angler motors to the pin and falls back onto the structure.
+- Note anchor scope (line:depth ratio) and bottom weight needed to hold in today's conditions.
+
+GAME PLAN STRUCTURE:
+- Where to launch, what time to leave the dock
+- Where to get bait on the way (live bait well, cast net spot, bait shop with GPS)
+- Troll routes between structure (not just waypoints — connect them into a circuit)
+- The PAYOFF WINDOW: which tide turn or solunar major is the money period, and how to pace the day so the angler is fresh and in position for it
+- Coaching notes: descender rig if water temp > 78°F for barotrauma releases, weight recommendations for the drift speed, when to grind vs when to move
 
 IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no explanation text before or after. The JSON must match this schema exactly:
 
 {
-  "conditionsSummary": "2-3 sentence overview of today's conditions",${draft.isOffshore ? `
+  "conditionsSummary": "2-3 sentence overview of today's conditions and what it means for the bite",
+  "launchPlan": "Where to launch, what time to leave, where to get bait on the way — specific ramp name + GPS if possible",
+  "payoffWindow": "The single best window of the day (e.g. '1:15 PM tide turn + solunar major = the money period') and why — this is the climax the whole schedule builds toward",
+  "coachingNotes": ["actionable coaching tip 1 — e.g. weight/tackle for today's drift", "tip 2 — e.g. descender rig for depth/temp", "tip 3 — pacing/energy management"],${draft.isOffshore ? `
   "offshoreGoNoGo": {
     "status": "go, caution, or no_go",
     "waveHeightFt": <number>,
@@ -142,10 +158,12 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
           "name": "Spot A — descriptive location name with structure reference",
           "coordinates": { "lat": <number>, "lng": <number> },
           "depthFt": "e.g. 5–12 ft",
-          "notes": "specific anchoring, approach angle, and technique notes — mention nearby structure",
+          "notes": "specific anchoring, approach angle, drift direction, and technique notes — mention nearby structure",
           "accessType": ["boat"],
           "arrivalTime": "e.g. 10:00 AM",
-          "targetSpecies": ["species id"]
+          "targetSpecies": ["species id"],
+          "anchorPinEbb": { "lat": 0, "lng": 0, "notes": "drop here on ebb, fall back onto structure" },
+          "anchorPinFlood": { "lat": 0, "lng": 0, "notes": "drop here on flood, fall back onto structure" }
         }
       ],
       "rig": {
@@ -177,7 +195,22 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
       "rig": "rig name"
     }
   ],
-  "baitFinderTip": "GPS area to find live bait — diving birds, cast net spots",
+  "trollRoutes": [
+    {
+      "name": "TROLL-LEDGE-TO-REEF — descriptive route name",
+      "waypoints": [{ "lat": 0, "lng": 0 }],
+      "speed": "trolling speed in knots",
+      "targetSpecies": ["species"],
+      "notes": "what to tow, depth to run"
+    }
+  ],
+  "baitSearchArea": {
+    "name": "BAIT-SEARCH — where to find live bait on the way",
+    "coordinates": { "lat": 0, "lng": 0 },
+    "method": "cast net technique / what to look for (diving birds, bait flipping)",
+    "species": "pogies, mullet, etc."
+  },
+  "baitFinderTip": "GPS area to find live bait — diving birds, cast net spots, bridge pilings",
   "proTips": ["tip 1", "tip 2", "tip 3"]
 }`;
 }
@@ -355,9 +388,14 @@ export async function generateFishingReport(
     conditions,
     input:             draft,
     conditionsSummary: parsed.conditionsSummary ?? 'Conditions data unavailable.',
+    launchPlan:        parsed.launchPlan,
+    payoffWindow:      parsed.payoffWindow,
+    coachingNotes:     parsed.coachingNotes ?? [],
     offshoreGoNoGo:    parsed.offshoreGoNoGo,
     species:           parsed.species ?? [],
     schedule:          parsed.schedule ?? [],
+    trollRoutes:       parsed.trollRoutes ?? [],
+    baitSearchArea:    parsed.baitSearchArea,
     baitFinderTip:     parsed.baitFinderTip,
     proTips:           parsed.proTips ?? [],
   } as FishingReport;

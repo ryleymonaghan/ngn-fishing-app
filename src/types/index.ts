@@ -163,6 +163,25 @@ export interface FishingSpot {
   accessType: AccessTypeId[];
   arrivalTime?: string;  // '10:00 AM'
   targetSpecies?: string[];
+  anchorPinEbb?: Coordinates & { notes?: string };
+  anchorPinFlood?: Coordinates & { notes?: string };
+}
+
+// ── Troll Route ──────────────────────────────
+export interface TrollRoute {
+  name: string;            // 'TROLL-LEDGE-TO-REEF'
+  waypoints: Coordinates[];
+  speed?: string;          // trolling speed in knots
+  targetSpecies?: string[];
+  notes?: string;
+}
+
+// ── Bait Search Area ─────────────────────────
+export interface BaitSearchArea {
+  name: string;            // 'BAIT-SEARCH'
+  coordinates: Coordinates;
+  method?: string;         // 'cast net, look for diving birds'
+  species?: string;        // 'pogies, mullet'
 }
 
 // ── Rig / Tackle ─────────────────────────────
@@ -220,9 +239,14 @@ export interface FishingReport {
   };
 
   conditionsSummary: string;
+  launchPlan?: string;       // Where to launch, bait on the way
+  payoffWindow?: string;     // The money period of the day
+  coachingNotes?: string[];  // Actionable captain-level coaching
   species: SpeciesSection[];
   schedule: ScheduleEntry[];
-  baitFinderTip?: string;  // Cast net / bird GPS tip
+  trollRoutes?: TrollRoute[];
+  baitSearchArea?: BaitSearchArea;
+  baitFinderTip?: string;    // Cast net / bird GPS tip
   proTips: string[];
 }
 
