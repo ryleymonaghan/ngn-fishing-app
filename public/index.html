@@ -109,46 +109,76 @@
       opacity: 0.7;
     }
 
-    /* ── MATRIX TYPING ────────────────── */
-    .matrix-block {
-      margin: 40px auto;
-      text-align: left;
-      max-width: 600px;
-      min-height: 180px;
-      position: relative;
+    /* ── HERO TAGLINE (typewriter) ────── */
+    .hero-tagline {
+      margin: 36px auto 0;
+      text-align: center;
+      max-width: 640px;
     }
 
-    .matrix-line {
+    .tagline-text {
       font-family: 'Orbitron', monospace;
-      font-size: 0.82rem;
-      line-height: 1.9;
-      color: var(--seafoam);
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      letter-spacing: 0.02em;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 0.06em;
+      line-height: 1.6;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 3px solid var(--seafoam);
+      display: inline-block;
+      animation: typewriter 2.2s steps(52) 0.5s forwards, blinkCaret 0.6s step-end infinite;
+      width: 0;
     }
 
-    .matrix-line.visible {
+    @keyframes typewriter {
+      to { width: 100%; }
+    }
+
+    @keyframes blinkCaret {
+      50% { border-color: transparent; }
+    }
+
+    /* ── TESTIMONIALS ─────────────────── */
+    .testimonials {
+      margin: 48px auto 0;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.6s ease 2.8s, transform 0.6s ease 2.8s;
+    }
+
+    .testimonials.visible {
       opacity: 1;
       transform: translateY(0);
     }
 
-    .matrix-line .cursor {
-      display: inline-block;
-      width: 8px;
-      height: 1em;
-      background: var(--seafoam);
-      margin-left: 2px;
-      animation: blink 0.7s step-end infinite;
-      vertical-align: text-bottom;
+    .testimonial {
+      background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+      border: 1px solid rgba(78,205,196,0.12);
+      border-left: 3px solid var(--seafoam);
+      border-radius: 8px;
+      padding: 20px 24px;
+      text-align: left;
     }
 
-    .matrix-line.accent { color: var(--gold); }
-    .matrix-line.bright { color: var(--white); font-weight: 600; }
+    .testimonial-quote {
+      font-size: 0.92rem;
+      color: var(--white);
+      line-height: 1.65;
+      font-style: italic;
+    }
 
-    @keyframes blink {
-      50% { opacity: 0; }
+    .testimonial-author {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      color: var(--seafoam);
+      margin-top: 10px;
+      font-style: normal;
     }
 
     /* ── CTA BUTTONS ──────────────────── */
@@ -373,7 +403,8 @@
     /* ── RESPONSIVE ────────────────────── */
     @media (max-width: 600px) {
       .brand-name { font-size: 2.2rem; letter-spacing: 0.2em; }
-      .matrix-line { font-size: 0.72rem; }
+      .tagline-text { font-size: 0.82rem; white-space: normal; }
+      .testimonial-quote { font-size: 0.84rem; }
       .cta-row { flex-direction: column; align-items: center; }
       .btn { width: 100%; max-width: 300px; text-align: center; }
       .features-grid { grid-template-columns: 1fr 1fr; }
@@ -392,8 +423,19 @@
       <div class="brand-sub">F I S H I N G</div>
       <div class="brand-tm">No Guide Needed™</div>
 
-      <div class="matrix-block" id="matrixBlock">
-        <!-- Lines injected by JS -->
+      <div class="hero-tagline">
+        <span class="tagline-text">The only fishing guide you'll ever need. Tried, Tested and Proven.</span>
+      </div>
+
+      <div class="testimonials" id="testimonials">
+        <div class="testimonial">
+          <div class="testimonial-quote">"The app creator is a friend of mine and has allowed me to use the app — every single time I follow instructions I am on fish."</div>
+          <div class="testimonial-author">— Dan Vershon, Charleston SC</div>
+        </div>
+        <div class="testimonial">
+          <div class="testimonial-quote">"I am a boat builder and tournament fisherman in Southern Florida. I had NGN Fishing create a report for a tuna, mahi, and snapper tournament in June 2026 — it guided me to exact coordinates, told me when to be there, set my spot lock and DAMN! Massive snapper immediately."</div>
+          <div class="testimonial-author">— Tournament Angler, South FL</div>
+        </div>
       </div>
 
       <div class="cta-row" id="ctaRow">
@@ -409,8 +451,8 @@
     <div class="features-grid">
       <div class="feature-card">
         <span class="feature-icon">🎯</span>
-        <div class="feature-title">AI Reports</div>
-        <div class="feature-desc">GPS coordinates, species targets, rig setups, and a full day schedule — built from live data.</div>
+        <div class="feature-title">Fishing Reports</div>
+        <div class="feature-desc">GPS coordinates, species targets, rig setups, and a full day schedule — built from live conditions.</div>
       </div>
       <div class="feature-card">
         <span class="feature-icon">🗺️</span>
@@ -472,64 +514,11 @@
   </footer>
 
   <script>
-    // ── Matrix typing animation ──────────────────
-    const lines = [
-      { text: '> Initializing NGN algorithm...', cls: '' },
-      { text: '> Pulling tides, wind, water temp, lunar cycles...', cls: '' },
-      { text: '> Cross-referencing species behavior patterns...', cls: '' },
-      { text: '> Generating your fishing schedule...', cls: 'accent' },
-      { text: '> Coordinates locked. Rig matched. Alerts armed.', cls: 'bright' },
-      { text: '> The algorithm tells you where to go, what to throw,', cls: '' },
-      { text: '  and when the bite is over — move to the next spot.', cls: '' },
-      { text: '> Tried. True. Tested.', cls: 'bright' },
-    ];
-
-    const block = document.getElementById('matrixBlock');
-    const ctaRow = document.getElementById('ctaRow');
-    let currentLine = 0;
-
-    function typeLine() {
-      if (currentLine >= lines.length) {
-        // Show CTA buttons after typing finishes
-        setTimeout(() => ctaRow.classList.add('visible'), 400);
-        return;
-      }
-
-      const { text, cls } = lines[currentLine];
-      const el = document.createElement('div');
-      el.className = 'matrix-line' + (cls ? ' ' + cls : '');
-
-      const textSpan = document.createElement('span');
-      textSpan.className = 'line-text';
-      const cursorSpan = document.createElement('span');
-      cursorSpan.className = 'cursor';
-
-      el.appendChild(textSpan);
-      el.appendChild(cursorSpan);
-      block.appendChild(el);
-
-      // Fade in the line
-      requestAnimationFrame(() => el.classList.add('visible'));
-
-      // Type characters one by one
-      let charIdx = 0;
-      const typeChar = () => {
-        if (charIdx < text.length) {
-          textSpan.textContent = text.slice(0, charIdx + 1);
-          charIdx++;
-          setTimeout(typeChar, 18 + Math.random() * 22);
-        } else {
-          // Remove cursor from this line, move to next
-          cursorSpan.remove();
-          currentLine++;
-          setTimeout(typeLine, 300);
-        }
-      };
-      setTimeout(typeChar, 150);
-    }
-
-    // Start after a brief pause
-    setTimeout(typeLine, 600);
+    // Show testimonials + CTA after typewriter finishes (~2.8s)
+    setTimeout(() => {
+      document.getElementById('testimonials').classList.add('visible');
+      document.getElementById('ctaRow').classList.add('visible');
+    }, 2800);
   </script>
 </body>
 </html>

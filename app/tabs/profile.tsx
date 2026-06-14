@@ -10,6 +10,7 @@ import {
 } from '@constants/index';
 import { useAuthStore, useReportStore } from '@stores/index';
 import { startCheckout, openCustomerPortal, type CheckoutTier } from '@services/stripeService';
+import { restoreSubscription } from '@services/subscriptionService';
 import { requestNotificationPermission, configureNotifications, getPendingAlerts } from '@services/notificationService';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
     String(user?.boatSpeedMph ?? OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH)
   );
   const [checkoutLoading, setCheckoutLoading] = useState<CheckoutTier | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
   const handleUpgrade = async (tier: CheckoutTier) => {
     setCheckoutLoading(tier);
@@ -104,6 +106,34 @@ export default function ProfileScreen() {
               >
                 <Text style={s.manageBtnText}>Manage Subscription</Text>
               </TouchableOpacity>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[s.manageBtn, { marginTop: 8 }]}
+                  onPress={async () => {
+                    setRestoreLoading(true);
+                    try {
+                      const result = await restoreSubscription();
+                      if (result.isPro) {
+                        Alert.alert('Restored', 'Your Pro subscription has been restored.');
+                      } else {
+                        Alert.alert('No Subscription Found', 'No active subscription found to restore.');
+                      }
+                    } catch (err: any) {
+                      Alert.alert('Restore Error', err.message || 'Could not restore purchases.');
+                    } finally {
+                      setRestoreLoading(false);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                  disabled={restoreLoading}
+                >
+                  {restoreLoading ? (
+                    <ActivityIndicator color={COLORS.seafoam} size="small" />
+                  ) : (
+                    <Text style={s.manageBtnText}>Restore Purchases</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <>
@@ -138,6 +168,34 @@ export default function ProfileScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[s.manageBtn, { marginTop: 8 }]}
+                  onPress={async () => {
+                    setRestoreLoading(true);
+                    try {
+                      const result = await restoreSubscription();
+                      if (result.isPro) {
+                        Alert.alert('Restored', 'Your Pro subscription has been restored.');
+                      } else {
+                        Alert.alert('No Subscription Found', 'No active subscription found to restore.');
+                      }
+                    } catch (err: any) {
+                      Alert.alert('Restore Error', err.message || 'Could not restore purchases.');
+                    } finally {
+                      setRestoreLoading(false);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                  disabled={restoreLoading}
+                >
+                  {restoreLoading ? (
+                    <ActivityIndicator color={COLORS.seafoam} size="small" />
+                  ) : (
+                    <Text style={s.manageBtnText}>Restore Purchases</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -244,7 +302,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Version */}
-        <Text style={s.version}>NGN Fishing v0.1.0 · ngnfishing.com</Text>
+        <Text style={s.version}>NGN Fishing v1.0.0 · ngnfishing.com</Text>
 
       </ScrollView>
     </SafeAreaView>

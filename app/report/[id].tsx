@@ -244,6 +244,22 @@ export default function ReportScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Print Report (web only) */}
+        {Platform.OS === 'web' && (
+          <TouchableOpacity
+            style={s.printBtn}
+            onPress={() => {
+              if (typeof window !== 'undefined' && window.print) {
+                window.print();
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={s.printBtnIcon}>🖨</Text>
+            <Text style={s.printBtnText}>PRINT MY REPORT</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Goin' Fishin' CTA */}
         <TouchableOpacity
           style={s.goinFishin}
@@ -622,5 +638,29 @@ const s = StyleSheet.create({
     color: '#060E1A',
     marginTop: 4,
     opacity: 0.7,
+  },
+
+  // Print button (web)
+  printBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#081E36',
+    borderWidth: 1,
+    borderColor: COLORS.white,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 10,
+  },
+  printBtnIcon: {
+    fontSize: 18,
+  },
+  printBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.white,
+    fontFamily: MONO,
+    letterSpacing: 2,
   },
 });

@@ -280,6 +280,7 @@ export interface AuthStore {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   loadUser: () => Promise<void>;
+  updateReportsUsed: (count: number) => void;
   canGenerateReport: () => boolean;
 }
 

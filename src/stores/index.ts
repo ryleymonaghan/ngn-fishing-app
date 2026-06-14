@@ -110,6 +110,11 @@ export const useReportStore = create<ReportStore>()(
             activeReport: report,
             isGenerating: false,
           }));
+          // Increment reportsUsed in auth store
+          const authState = useAuthStore.getState();
+          if (authState.user) {
+            authState.updateReportsUsed(authState.user.reportsUsed + 1);
+          }
           // Cloud sync — fire and forget (log errors for debugging)
           const userId = useAuthStore.getState().user?.id;
           if (userId) {
@@ -163,11 +168,12 @@ export const useAuthStore = create<AuthStore>()(
           const session = data.session;
           if (session?.user) {
             const userEmail = session.user.email ?? email;
+            const existingUser = get().user;
             const userProfile = {
               id:           session.user.id,
               email:        userEmail,
               fullName:     session.user.user_metadata?.name ?? '',
-              reportsUsed:  0,
+              reportsUsed:  existingUser?.id === session.user.id ? existingUser.reportsUsed : 0,
               subscription: getDemoSubscription(userEmail),
               boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
               boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
@@ -196,12 +202,13 @@ export const useAuthStore = create<AuthStore>()(
           const session = data.session;
           if (session?.user) {
             const signupEmail = session.user.email ?? email;
+            const existingUser = get().user;
             set({
               user: {
                 id:           session.user.id,
                 email:        signupEmail,
                 fullName:     name ?? '',
-                reportsUsed:  0,
+                reportsUsed:  existingUser?.id === session.user.id ? existingUser.reportsUsed : 0,
                 subscription: getDemoSubscription(signupEmail),
                 boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
                 boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
@@ -230,12 +237,13 @@ export const useAuthStore = create<AuthStore>()(
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const loadEmail = session.user.email ?? '';
+            const existingUser = get().user;
             set({
               user: {
                 id:           session.user.id,
                 email:        loadEmail,
                 fullName:     session.user.user_metadata?.name ?? '',
-                reportsUsed:  0,
+                reportsUsed:  existingUser?.id === session.user.id ? existingUser.reportsUsed : 0,
                 subscription: getDemoSubscription(loadEmail),
                 boatLengthFt: OFFSHORE_SAFETY.DEFAULT_BOAT_LENGTH_FT,
                 boatSpeedMph: OFFSHORE_SAFETY.DEFAULT_BOAT_SPEED_MPH,
@@ -246,6 +254,13 @@ export const useAuthStore = create<AuthStore>()(
           }
         } catch {
           // No session — stay logged out
+        }
+      },
+
+      updateReportsUsed: (count: number) => {
+        const { user } = get();
+        if (user) {
+          set({ user: { ...user, reportsUsed: count } });
         }
       },
 

@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: 'NGN Fishing',
     slug: 'ngn-fishing',
-    version: '0.1.0',
+    version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     scheme: 'ngnfishing',
@@ -56,6 +56,7 @@ module.exports = {
       ],
       'expo-asset',
       'expo-font',
+      'react-native-purchases',
     ],
     experiments: {
       typedRoutes: true,
@@ -67,6 +68,7 @@ module.exports = {
       SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
+      REVENUECAT_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? '',
       BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app',
       eas: {
         projectId: 'bcba23bd-07f5-4aa3-bd89-53398db49ba1',
