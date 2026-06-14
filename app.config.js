@@ -15,8 +15,8 @@ module.exports = {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.oakangeldigital.ngnfishing',
-      buildNumber: '1',
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSLocationWhenInUseUsageDescription:
           'NGN Fishing uses your location to find nearby fishing spots and tide stations.',
         NSLocationAlwaysAndWhenInUseUsageDescription:
@@ -67,7 +67,7 @@ module.exports = {
       SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
       STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
-      REVENUECAT_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? '',
+      REVENUECAT_API_KEY: process.env.REVENUECAT_API_KEY ?? '',
       BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL ?? 'https://ngn-fishing-backend-production.up.railway.app',
       eas: {
         projectId: 'bcba23bd-07f5-4aa3-bd89-53398db49ba1',
