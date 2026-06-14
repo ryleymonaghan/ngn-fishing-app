@@ -113,7 +113,7 @@
     .hero-tagline {
       margin: 36px auto 0;
       text-align: center;
-      max-width: 640px;
+      max-width: 880px;
     }
 
     .tagline-text {
@@ -127,7 +127,7 @@
       overflow: hidden;
       border-right: 3px solid var(--seafoam);
       display: inline-block;
-      animation: typewriter 2.2s steps(52) 0.5s forwards, blinkCaret 0.6s step-end infinite;
+      animation: typewriter 2.5s steps(66) 0.5s forwards, blinkCaret 0.6s step-end infinite;
       width: 0;
     }
 
@@ -403,7 +403,7 @@
     /* ── RESPONSIVE ────────────────────── */
     @media (max-width: 600px) {
       .brand-name { font-size: 2.2rem; letter-spacing: 0.2em; }
-      .tagline-text { font-size: 0.82rem; white-space: normal; }
+      .tagline-text { font-size: 0.78rem; white-space: normal; animation: none; width: auto; border-right: none; }
       .testimonial-quote { font-size: 0.84rem; }
       .cta-row { flex-direction: column; align-items: center; }
       .btn { width: 100%; max-width: 300px; text-align: center; }

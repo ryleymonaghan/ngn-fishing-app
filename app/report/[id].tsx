@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, OFFSHORE_SAFETY } from '@constants/index';
+import { COLORS } from '@constants/index';
 import { useReportStore } from '@stores/index';
 import { scheduleMoveAlerts, configureNotifications } from '@services/notificationService';
 import type { FishingReport, SpeciesSection, ScheduleEntry, RigRecommendation, TrollRoute, BaitSearchArea } from '@app-types/index';
@@ -175,7 +175,7 @@ export default function ReportScreen() {
 
         {/* Launch Plan */}
         {report.launchPlan && (
-          <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: COLORS.seafoam }]}>
+          <View style={s.card}>
             <Text style={s.cardTitle}>Launch Plan</Text>
             <Text style={s.bodyText}>{report.launchPlan}</Text>
           </View>
@@ -183,8 +183,8 @@ export default function ReportScreen() {
 
         {/* Payoff Window */}
         {report.payoffWindow && (
-          <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: COLORS.warning }]}>
-            <Text style={[s.cardTitle, { color: COLORS.warning }]}>Payoff Window</Text>
+          <View style={s.payoffCard}>
+            <Text style={s.payoffTitle}>Payoff Window</Text>
             <Text style={s.bodyText}>{report.payoffWindow}</Text>
           </View>
         )}
@@ -206,7 +206,7 @@ export default function ReportScreen() {
 
         {/* Bait Finder */}
         {report.baitFinderTip && (
-          <View style={[s.card, s.baitCard]}>
+          <View style={s.card}>
             <Text style={s.cardTitle}>Cast Net Bait Finder</Text>
             <Text style={s.bodyText}>{report.baitFinderTip}</Text>
           </View>
@@ -214,10 +214,10 @@ export default function ReportScreen() {
 
         {/* Coaching Notes */}
         {report.coachingNotes && report.coachingNotes.length > 0 && (
-          <View style={[s.card, { borderTopWidth: 3, borderTopColor: COLORS.warning }]}>
+          <View style={s.card}>
             <Text style={s.cardTitle}>Captain's Notes</Text>
             {report.coachingNotes.map((note, i) => (
-              <Text key={i} style={s.proTip}>⚓ {note}</Text>
+              <Text key={i} style={s.coachingNote}>{note}</Text>
             ))}
           </View>
         )}
@@ -464,11 +464,11 @@ function SpeciesCard({
 
       {/* Bait */}
       <View style={s.baitBox}>
-        <Text style={s.baitBoxTitle}>Bait</Text>
+        <Text style={s.rigSectionHeader}>BAIT</Text>
         <Text style={s.bodyText}>{species.baitRecommendation}</Text>
       </View>
 
-      <Text style={s.proTip}>💡 {species.proTip}</Text>
+      <Text style={s.speciesProTip}>{species.proTip}</Text>
 
       {/* Regs */}
       <Text style={s.regsText}>
@@ -500,76 +500,93 @@ const s = StyleSheet.create({
   content:         { padding: 20, paddingBottom: 48 },
   empty:           { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText:       { color: COLORS.textMuted, fontSize: 16 },
-  genAt:           { fontSize: 12, color: COLORS.textMuted, marginBottom: 16 },
+  genAt:           { fontSize: 12, color: COLORS.textMuted, marginBottom: 20 },
 
+  // Go/No-Go
   goNoGo: {
-    borderWidth:   2,
-    borderRadius:  12,
+    borderWidth:   1.5,
+    borderRadius:  10,
     padding:       16,
     marginBottom:  16,
   },
-  goNoGoLabel:     { fontSize: 22, fontWeight: '800', marginBottom: 6 },
-  goNoGoReasoning: { fontSize: 13, color: COLORS.textSecondary },
+  goNoGoLabel:     { fontSize: 20, fontWeight: '800', marginBottom: 6 },
+  goNoGoReasoning: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
 
+  // Standard card
   card: {
     backgroundColor: COLORS.navyLight,
-    borderRadius:    12,
+    borderRadius:    10,
     padding:         16,
-    marginBottom:    16,
+    marginBottom:    14,
   },
-  baitCard:        { borderLeftWidth: 3, borderLeftColor: COLORS.seafoam },
-  cardTitle:       { fontSize: 16, fontWeight: '700', color: COLORS.white, marginBottom: 10 },
-  bodyText:        { fontSize: 14, color: COLORS.textSecondary, lineHeight: 21 },
+  cardTitle:       { fontSize: 15, fontWeight: '700', color: COLORS.white, marginBottom: 10 },
+  bodyText:        { fontSize: 15, color: COLORS.textSecondary, lineHeight: 23 },
 
+  // Payoff Window — the one card that keeps a color accent
+  payoffCard: {
+    backgroundColor: COLORS.navyLight,
+    borderRadius:    10,
+    padding:         16,
+    marginBottom:    14,
+    borderWidth:     1,
+    borderColor:     `${COLORS.warning}40`,
+  },
+  payoffTitle:     { fontSize: 15, fontWeight: '700', color: COLORS.warning, marginBottom: 10 },
+
+  // Species card — no colored top border, subtle separator
   speciesCard: {
     backgroundColor: COLORS.navyLight,
-    borderRadius:    12,
-    padding:         16,
-    marginBottom:    16,
-    borderTopWidth:  3,
-    borderTopColor:  COLORS.seafoam,
-  },
-  speciesTitle:    { fontSize: 20, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
-  biteWindow:      { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', marginBottom: 6 },
-
-  routeAllBtn: {
-    backgroundColor: `${COLORS.seafoam}15`,
-    borderWidth:     1,
-    borderColor:     COLORS.seafoam,
     borderRadius:    10,
+    padding:         16,
+    marginBottom:    14,
+    borderTopWidth:  1,
+    borderTopColor:  `${COLORS.white}12`,
+  },
+  speciesTitle:    { fontSize: 19, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
+  biteWindow:      { fontSize: 14, color: COLORS.seafoam, fontWeight: '600', marginBottom: 8 },
+
+  // Navigate all spots button
+  routeAllBtn: {
+    backgroundColor: `${COLORS.seafoam}10`,
+    borderWidth:     1,
+    borderColor:     `${COLORS.seafoam}50`,
+    borderRadius:    8,
     padding:         12,
     marginTop:       12,
     alignItems:      'center',
   },
-  routeAllText:    { fontSize: 12, fontWeight: '800', color: COLORS.seafoam, letterSpacing: 1.5 },
+  routeAllText:    { fontSize: 12, fontWeight: '700', color: COLORS.seafoam, letterSpacing: 1 },
   routeAllSub:     { fontSize: 10, color: COLORS.textMuted, marginTop: 3 },
+
+  // Individual spot row
   spotRow: {
     flexDirection:   'row',
     alignItems:      'center',
-    backgroundColor: `${COLORS.navy}80`,
-    borderRadius:    10,
-    padding:         12,
-    marginTop:       10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: `${COLORS.white}10`,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginTop:       2,
   },
   spotInfo:        { flex: 1 },
   spotHeader:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   spotIndex: {
-    fontSize: 16, fontWeight: '800', color: COLORS.seafoam,
-    width: 24, height: 24, textAlign: 'center', lineHeight: 24,
-    backgroundColor: `${COLORS.seafoam}20`, borderRadius: 12, overflow: 'hidden',
+    fontSize: 14, fontWeight: '700', color: COLORS.seafoam,
+    width: 24, textAlign: 'center', lineHeight: 24,
   },
-  spotName:        { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  spotName:        { fontSize: 15, fontWeight: '600', color: COLORS.white },
   spotCoords:      { fontSize: 10, color: COLORS.textMuted, fontFamily: MONO, marginTop: 2, letterSpacing: 0.5 },
-  spotDepth:       { fontSize: 12, color: COLORS.textMuted, marginTop: 4, marginLeft: 34 },
-  spotNotes:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 3, marginLeft: 34 },
-  arrivalTime:     { fontSize: 11, color: COLORS.seafoam, marginTop: 4, fontWeight: '600', marginLeft: 34 },
+  spotDepth:       { fontSize: 13, color: COLORS.textMuted, marginTop: 4, marginLeft: 34 },
+  spotNotes:       { fontSize: 13, color: COLORS.textSecondary, marginTop: 3, marginLeft: 34, lineHeight: 20 },
+  arrivalTime:     { fontSize: 12, color: COLORS.seafoam, marginTop: 4, fontWeight: '600', marginLeft: 34 },
   navIcon:         { fontSize: 13, color: COLORS.seafoam, fontWeight: '600', paddingLeft: 8 },
 
+  // Rig box
   rigBox: {
-    backgroundColor: `${COLORS.ocean}30`,
-    borderRadius:    10,
+    backgroundColor: `${COLORS.navy}60`,
+    borderRadius:    8,
     padding:         14,
-    marginTop:       12,
+    marginTop:       14,
   },
   rigSectionHeader: {
     fontSize: 10,
@@ -580,25 +597,22 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   rigTitle:        { fontSize: 15, fontWeight: '700', color: COLORS.white, marginBottom: 4 },
-  rigDetail:       { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  rigDetail:       { fontSize: 13, color: COLORS.textSecondary, marginTop: 2, lineHeight: 20 },
 
-  knotRow: {
-    marginTop: 4,
-  },
-  knotName:        { fontSize: 14, fontWeight: '600', color: COLORS.seafoam },
+  knotRow:         { marginTop: 4 },
+  knotName:        { fontSize: 14, fontWeight: '600', color: COLORS.white },
 
-  tackleSection: {
-    marginTop: 4,
-  },
-  tackleItem:      { fontSize: 12, color: COLORS.textSecondary, marginTop: 3, paddingLeft: 4 },
+  tackleSection:   { marginTop: 4 },
+  tackleItem:      { fontSize: 13, color: COLORS.textSecondary, marginTop: 3, paddingLeft: 4, lineHeight: 20 },
 
+  // Shop button — seafoam for interactive
   shopBtn: {
     backgroundColor: COLORS.seafoam,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 14,
   },
   shopBtnText: {
     fontSize: 13,
@@ -607,25 +621,29 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
+  // Bait box — no left border
   baitBox: {
-    backgroundColor: `${COLORS.navy}80`,
-    borderRadius: 8,
-    padding: 12,
+    paddingTop: 12,
     marginTop: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.seafoam,
+    borderTopWidth: 0.5,
+    borderTopColor: `${COLORS.white}12`,
   },
-  baitBoxTitle:    { fontSize: 12, fontWeight: '700', color: COLORS.seafoam, marginBottom: 4, letterSpacing: 1 },
 
-  proTip:          { fontSize: 13, color: COLORS.sky, marginTop: 10, lineHeight: 20 },
-  regsText:        { fontSize: 11, color: COLORS.textMuted, marginTop: 8 },
+  // Pro tip inside species card
+  speciesProTip:   { fontSize: 14, color: COLORS.textSecondary, marginTop: 12, lineHeight: 22, fontStyle: 'italic' },
+  // Coaching notes
+  coachingNote:    { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, lineHeight: 23 },
+  // Pro tips in standalone section
+  proTip:          { fontSize: 14, color: COLORS.textSecondary, marginTop: 8, lineHeight: 22 },
+  regsText:        { fontSize: 12, color: COLORS.textMuted, marginTop: 10 },
 
-  scheduleRow:     { flexDirection: 'row', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: `${COLORS.white}15` },
-  scheduleTime:    { fontSize: 13, fontWeight: '700', color: COLORS.seafoam, width: 70 },
+  // Schedule
+  scheduleRow:     { flexDirection: 'row', paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: `${COLORS.white}10` },
+  scheduleTime:    { fontSize: 14, fontWeight: '700', color: COLORS.seafoam, width: 80, fontFamily: MONO },
   scheduleInfo:    { flex: 1 },
-  scheduleSpecies: { fontSize: 13, fontWeight: '600', color: COLORS.white },
-  scheduleLocation:{ fontSize: 12, color: COLORS.textSecondary },
-  scheduleTide:    { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  scheduleSpecies: { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  scheduleLocation:{ fontSize: 13, color: COLORS.textSecondary, marginTop: 1 },
+  scheduleTide:    { fontSize: 12, color: COLORS.textMuted, marginTop: 3 },
 
   // Action buttons (share/download)
   actionRow: {
@@ -635,9 +653,8 @@ const s = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: '#081E36',
-    borderWidth: 1,
-    borderColor: COLORS.seafoam,
+    backgroundColor: COLORS.navyLight,
+    borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     flexDirection: 'row',
@@ -653,19 +670,18 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.seafoam,
     fontFamily: MONO,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
 
   // Chartplotter GPX export
   chartplotterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#081E36',
-    borderWidth: 1,
-    borderColor: COLORS.warning,
+    backgroundColor: COLORS.navyLight,
+    borderRadius: 8,
     paddingVertical: 16,
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     gap: 12,
   },
   chartplotterIcon: {
@@ -674,34 +690,35 @@ const s = StyleSheet.create({
   chartplotterText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.warning,
+    color: COLORS.white,
     fontFamily: MONO,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   chartplotterSub: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 2,
   },
 
   // Goin' Fishin' CTA
   goinFishin: {
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.seafoam,
+    borderRadius: 10,
     paddingVertical: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
     marginTop: 24,
   },
   goinFishinText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#060E1A',
+    color: COLORS.navy,
     fontFamily: MONO,
-    letterSpacing: 3,
+    letterSpacing: 2,
   },
   goinFishinSub: {
-    fontSize: 11,
-    color: '#060E1A',
+    fontSize: 12,
+    color: COLORS.navy,
     marginTop: 4,
     opacity: 0.7,
   },
@@ -711,9 +728,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#081E36',
-    borderWidth: 1,
-    borderColor: COLORS.white,
+    backgroundColor: COLORS.navyLight,
+    borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginTop: 12,
@@ -727,6 +743,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.white,
     fontFamily: MONO,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
 });

@@ -474,8 +474,8 @@
         localStorage.setItem('ngn_access_token', data.access_token);
         localStorage.setItem('ngn_refresh_token', data.refresh_token);
 
-        // Redirect to app
-        window.location.href = '/tabs';
+        // Redirect to homepage — /tabs is a mobile-only route
+        window.location.href = '/';
       } catch (err) {
         errorEl.textContent = err.message || 'Login failed. Please try again.';
         errorEl.classList.add('visible');

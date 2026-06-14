@@ -56,7 +56,6 @@ module.exports = {
       ],
       'expo-asset',
       'expo-font',
-      'react-native-purchases',
     ],
     experiments: {
       typedRoutes: true,
