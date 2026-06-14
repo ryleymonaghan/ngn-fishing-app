@@ -265,7 +265,7 @@ export interface UserProfile {
 
 export interface SubscriptionStatus {
   isActive: boolean;
-  tier: 'free' | 'pro_monthly' | 'pro_annual' | 'angler_monthly' | 'angler_annual';
+  tier: 'free' | 'pro_monthly' | 'pro_annual';
   expiresAt?: string;
   stripeCustomerId?: string;
 }

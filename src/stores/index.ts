@@ -148,7 +148,7 @@ function getDemoSubscription(email: string) {
     (demo) => email.toLowerCase() === demo.toLowerCase()
   );
   if (isDemoAccount) {
-    return { isActive: true, tier: 'angler_annual' as const, expiresAt: '2099-12-31' };
+    return { isActive: true, tier: 'pro_annual' as const, expiresAt: '2099-12-31' };
   }
   return { isActive: false, tier: 'free' as const, expiresAt: undefined };
 }

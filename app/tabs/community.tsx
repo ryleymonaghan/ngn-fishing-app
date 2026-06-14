@@ -110,7 +110,7 @@ export default function CommunityScreen() {
             {checkoutLoading ? (
               <ActivityIndicator color={COLORS.navy} />
             ) : (
-              <Text style={s.upgradeBtnText}>UNLOCK — $19.99/MO</Text>
+              <Text style={s.upgradeBtnText}>UNLOCK — $9.99/MO</Text>
             )}
           </TouchableOpacity>
           <Text style={s.lockedNote}>Includes all premium map layers + community</Text>
