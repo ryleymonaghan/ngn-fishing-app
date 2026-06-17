@@ -14,8 +14,9 @@ const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fis
 
 // ── Tuned token limit ────────────────────────────
 // Gold-standard reports with anchor pins, troll routes, coaching,
-// and 6-8 spots per species run 8,000–12,000 tokens.
-const REPORT_MAX_TOKENS = 12288;
+// and 6-8 spots per species run 8,000–14,000 tokens.
+// 3+ offshore species regularly exceeded 12288 and caused truncation.
+const REPORT_MAX_TOKENS = 16384;
 
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
@@ -263,26 +264,29 @@ async function callClaude(userPrompt: string): Promise<string> {
 
   // The backend proxies the raw Anthropic response — same shape on both paths.
   // Extract text content from response (may include tool_use blocks)
+  let textContent = '';
   if (data.content && Array.isArray(data.content)) {
-    const textContent = data.content
+    textContent = data.content
       .filter((block: any) => block.type === 'text')
       .map((block: any) => block.text)
       .join('');
-    if (textContent) return textContent;
   }
 
   // Fallback: if backend ever wraps differently or returns plain text
-  if (typeof data.text === 'string') return data.text;
-  if (typeof data.response === 'string') return data.response;
+  if (!textContent && typeof data.text === 'string') textContent = data.text;
+  if (!textContent && typeof data.response === 'string') textContent = data.response;
 
-  // Last resort: check stop_reason for truncation before erroring
-  if (data.stop_reason === 'max_tokens') {
-    throw new Error(
-      'Report was too long and got cut off. Try selecting fewer species or a shorter time window.'
-    );
+  if (!textContent) {
+    throw new Error('Unexpected response format from report API');
   }
 
-  throw new Error('Unexpected response format from report API');
+  // Flag truncation so the parser can attempt repair
+  const wasTruncated = data.stop_reason === 'max_tokens';
+  if (wasTruncated) {
+    console.warn('[NGN] Response truncated at max_tokens — will attempt JSON repair');
+  }
+
+  return textContent;
 }
 
 // ── Parse Claude JSON Response ────────────────
@@ -294,25 +298,32 @@ function parseReportJson(raw: string): Partial<FishingReport> {
     .replace(/\s*```$/i, '')
     .trim();
 
-  // Step 2: find JSON object boundaries
+  // Step 2: find JSON start
   const start = clean.indexOf('{');
-  const end   = clean.lastIndexOf('}');
-  if (start === -1 || end === -1) {
+  if (start === -1) {
     throw new Error('No JSON object found in model response. The model may have returned plain text instead of JSON.');
   }
 
-  let jsonStr = clean.slice(start, end + 1);
+  // Step 3: try the full response first (lastIndexOf approach)
+  let jsonStr = clean.slice(start);
 
-  // Step 3: fix common Claude JSON quirks before parsing
+  // Step 4: fix common Claude JSON quirks before parsing
   // Remove trailing commas before } or ]
   jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
 
-  // Step 4: attempt parse
+  // Step 5: attempt parse of full response
   try {
     return JSON.parse(jsonStr);
   } catch (firstErr) {
-    // Step 5: if still failing, try to salvage truncated JSON
-    // by closing any open brackets/braces
+    // Step 6: try slicing at last } (may cut truncated tail)
+    const end = jsonStr.lastIndexOf('}');
+    if (end > 0) {
+      try {
+        return JSON.parse(jsonStr.slice(0, end + 1));
+      } catch (_) { /* fall through to repair */ }
+    }
+
+    // Step 7: aggressive repair for truncated JSON
     const repaired = repairTruncatedJson(jsonStr);
     try {
       return JSON.parse(repaired);
@@ -330,11 +341,25 @@ function parseReportJson(raw: string): Partial<FishingReport> {
 // If max_tokens cut off the response mid-JSON, attempt to close
 // open arrays and objects so we can salvage partial data.
 function repairTruncatedJson(json: string): string {
+  // First: close any unclosed string by finding the last unescaped quote
+  // and checking if we're inside a string
+  let inStr = false;
+  let lastQuoteIdx = -1;
+  for (let i = 0; i < json.length; i++) {
+    if (json[i] === '\\' && inStr) { i++; continue; }
+    if (json[i] === '"') { inStr = !inStr; lastQuoteIdx = i; }
+  }
+  let repaired = json;
+  if (inStr) {
+    // We're inside an unclosed string — close it
+    repaired = json + '"';
+  }
+
   // Remove any trailing partial string/value (after last complete value)
-  let repaired = json.replace(/,\s*"[^"]*$/, '');  // trailing partial key
-  repaired = repaired.replace(/,\s*$/, '');          // trailing comma
+  repaired = repaired.replace(/,\s*"[^"]*$/, '');   // trailing partial key
+  repaired = repaired.replace(/,\s*$/, '');           // trailing comma
   repaired = repaired.replace(/:\s*"[^"]*$/, ': ""'); // trailing partial string value
-  repaired = repaired.replace(/:\s*$/, ': null');     // trailing colon with no value
+  repaired = repaired.replace(/:\s*$/, ': null');      // trailing colon with no value
 
   // Count open/close brackets and braces
   let openBraces = 0;
