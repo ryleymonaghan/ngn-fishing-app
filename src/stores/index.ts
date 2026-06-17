@@ -10,6 +10,7 @@ import { fetchLiveConditions } from '@services/conditionsService';
 import { generateFishingReport } from '@services/reportService';
 import { fetchSpeciesForecast } from '@services/forecastService';
 import { saveReportToCloud, fetchReportsFromCloud, syncUserProfile } from '@services/supabaseSync';
+import { registerPushToken, removePushToken } from '@services/pushTokenService';
 import { supabase } from '@lib/supabase';
 import {
   STORAGE_KEYS,
@@ -183,6 +184,8 @@ export const useAuthStore = create<AuthStore>()(
             set({ user: userProfile, isLoading: false });
             // Sync profile to cloud
             syncUserProfile(userProfile).catch(() => {});
+            // Register push token for weather alerts
+            registerPushToken(session.user.id).catch(() => {});
           }
         } catch (err: any) {
           set({ isLoading: false });
@@ -217,6 +220,8 @@ export const useAuthStore = create<AuthStore>()(
               },
               isLoading: false,
             });
+            // Register push token for weather alerts
+            registerPushToken(session.user.id).catch(() => {});
           } else {
             // Email confirmation required
             set({ isLoading: false });
@@ -228,6 +233,10 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signOut: async () => {
+        const { user } = get();
+        if (user) {
+          removePushToken(user.id).catch(() => {});
+        }
         await supabase.auth.signOut();
         set({ user: null });
       },

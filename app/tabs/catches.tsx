@@ -420,7 +420,7 @@ const s = StyleSheet.create({
 
   // Full-screen viewer
   viewer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#060E1A',
     zIndex: 50,
     justifyContent: 'center',

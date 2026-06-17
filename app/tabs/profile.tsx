@@ -12,6 +12,7 @@ import { useAuthStore, useReportStore } from '@stores/index';
 import { startCheckout, openCustomerPortal, type CheckoutTier } from '@services/stripeService';
 import { restoreSubscription } from '@services/subscriptionService';
 import { requestNotificationPermission, configureNotifications, getPendingAlerts } from '@services/notificationService';
+import { enablePushToken, disablePushToken, updateWeatherAlertsPref } from '@services/pushTokenService';
 
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace', default: 'monospace' });
 
@@ -52,6 +53,8 @@ export default function ProfileScreen() {
   );
   const [checkoutLoading, setCheckoutLoading] = useState<CheckoutTier | null>(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
+  const [weatherAlerts, setWeatherAlerts] = useState(true);
+  const [notifsEnabled, setNotifsEnabled] = useState(false);
 
   const handleUpgrade = async (tier: CheckoutTier) => {
     setCheckoutLoading(tier);
@@ -246,12 +249,15 @@ export default function ProfileScreen() {
         {/* Notification Settings */}
         <View style={s.card}>
           <Text style={s.cardLabel}>NOTIFICATIONS</Text>
+
+          {/* Master toggle — enable push notifications */}
           <TouchableOpacity
             style={s.notifBtn}
             onPress={async () => {
               const granted = await requestNotificationPermission();
               if (granted) {
                 await configureNotifications();
+                setNotifsEnabled(true);
                 const pending = await getPendingAlerts();
                 Alert.alert('Notifications Active', `Push notifications enabled. ${pending} alerts currently scheduled.`);
               } else {
@@ -260,9 +266,51 @@ export default function ProfileScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={s.notifBtnText}>Enable Push Notifications</Text>
+            <Text style={s.notifBtnText}>{notifsEnabled ? '✅ Push Notifications On' : 'Enable Push Notifications'}</Text>
             <Text style={s.notifBtnSub}>Move alerts, tide changes, weather warnings</Text>
           </TouchableOpacity>
+
+          {/* Weather Change Alerts toggle — subscribers only */}
+          <View style={s.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.toggleLabel}>Weather Change Alerts</Text>
+              <Text style={s.toggleSub}>
+                {isSubscribed
+                  ? 'Get alerted when conditions change overnight. If offshore turns rough, we\'ll prompt an inshore backup.'
+                  : 'Upgrade to Pro to receive weather change alerts.'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                s.toggleSwitch,
+                weatherAlerts && isSubscribed ? s.toggleOn : s.toggleOff,
+                !isSubscribed && { opacity: 0.4 },
+              ]}
+              onPress={async () => {
+                if (!isSubscribed) {
+                  Alert.alert('Pro Feature', 'Weather change alerts are available for Pro subscribers.', [
+                    { text: 'OK' },
+                    { text: 'Upgrade', onPress: () => handleUpgrade('pro_monthly') },
+                  ]);
+                  return;
+                }
+                const newVal = !weatherAlerts;
+                setWeatherAlerts(newVal);
+                if (user) {
+                  if (newVal) {
+                    await enablePushToken(user.id);
+                  } else {
+                    await disablePushToken(user.id);
+                  }
+                  await updateWeatherAlertsPref(user.id, newVal);
+                }
+              }}
+              activeOpacity={0.8}
+              disabled={!isSubscribed}
+            >
+              <View style={[s.toggleKnob, weatherAlerts && isSubscribed ? s.toggleKnobOn : s.toggleKnobOff]} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Community */}
@@ -379,6 +427,36 @@ const s = StyleSheet.create({
   },
   notifBtnText:       { fontSize: 14, fontWeight: '600', color: COLORS.seafoam },
   notifBtnSub:        { fontSize: 11, color: COLORS.textMuted, marginTop: 3 },
+
+  // Toggle row (weather alerts)
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: `${COLORS.textMuted}20`,
+  },
+  toggleLabel:        { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  toggleSub:          { fontSize: 11, color: COLORS.textMuted, marginTop: 3, lineHeight: 16 },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    marginLeft: 12,
+  },
+  toggleOn:           { backgroundColor: COLORS.seafoam },
+  toggleOff:          { backgroundColor: COLORS.textMuted },
+  toggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.white,
+  },
+  toggleKnobOn:       { alignSelf: 'flex-end' as const },
+  toggleKnobOff:      { alignSelf: 'flex-start' as const },
 
   // Community section
   communityIntro:     { fontSize: 13, color: COLORS.textSecondary, marginBottom: 14, lineHeight: 20 },

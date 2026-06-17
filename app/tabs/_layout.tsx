@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, type ColorValue } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { COLORS } from '@constants/index';
 
@@ -115,7 +115,7 @@ export default function TabLayout() {
   );
 }
 
-function TabIcon({ icon, color }: { icon: string; color: string }) {
+function TabIcon({ icon, color }: { icon: string; color: ColorValue }) {
   return (
     <View style={s.tabIconWrap}>
       <Text style={[s.tabIcon, { color }]}>{icon}</Text>
