@@ -287,13 +287,13 @@ export const LIVE_BAIT = [
   { id: 'fiddler_crab',   name: 'Fiddler Crab',     inshore: true,  offshore: false },
   { id: 'blue_crab',      name: 'Blue Crab',        inshore: true,  offshore: false },
   { id: 'pinfish',        name: 'Pinfish',           inshore: true,  offshore: true  },
-  { id: 'live_pogies',    name: 'Live Pogies (Menhaden)', inshore: true,  offshore: true  },
+  { id: 'live_pogies',    name: 'Live Pogies',            inshore: true,  offshore: true  },
 ] as const;
 
 export const FROZEN_BAIT = [
   { id: 'frozen_shrimp',  name: 'Frozen Shrimp',   inshore: true,  offshore: false },
   { id: 'frozen_mullet',  name: 'Frozen Mullet',   inshore: true,  offshore: true  },
-  { id: 'menhaden',       name: 'Menhaden (Pogies)', inshore: true, offshore: true  },
+  { id: 'frozen_pogies',  name: 'Frozen Pogies',     inshore: true, offshore: true  },
   { id: 'squid',          name: 'Squid',            inshore: false, offshore: true  },
   { id: 'ballyhoo',       name: 'Ballyhoo',         inshore: false, offshore: true  },
   { id: 'rigged_mullet',  name: 'Rigged Mullet',   inshore: false, offshore: true  },

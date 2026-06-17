@@ -27,7 +27,7 @@ export default function ReportsScreen() {
         <Text style={s.generateIcon}>▶</Text>
         <View style={s.generateTextWrap}>
           <Text style={s.generateTitle}>GENERATE NEW REPORT</Text>
-          <Text style={s.generateSub}>Answer a few questions for a custom AI fishing plan</Text>
+          <Text style={s.generateSub}>Answer a few questions for a custom fishing plan</Text>
         </View>
         <Text style={s.generateArrow}>→</Text>
       </TouchableOpacity>
@@ -40,7 +40,7 @@ export default function ReportsScreen() {
       {reports.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyTitle}>No reports yet</Text>
-          <Text style={s.emptyText}>Hit the button above to generate your first AI fishing report.</Text>
+          <Text style={s.emptyText}>Hit the button above to generate your first fishing report.</Text>
         </View>
       ) : (
         <FlatList

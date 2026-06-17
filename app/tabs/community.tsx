@@ -391,7 +391,7 @@ function PinDropModal({
                 <Text style={s.pinTypeBtnIcon}>🐟</Text>
                 <View>
                   <Text style={s.pinTypeBtnTitle}>BAIT LOCATION</Text>
-                  <Text style={s.pinTypeBtnDesc}>Found bait — menhaden, mullet, shrimp, etc.</Text>
+                  <Text style={s.pinTypeBtnDesc}>Found bait — mullet, shrimp, pogies, etc.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -419,7 +419,7 @@ function PinDropModal({
               <TextInput
                 style={s.modalInput}
                 placeholder={pinType === 'bait'
-                  ? 'e.g. Huge school of menhaden, east side of jetties'
+                  ? 'e.g. Huge school of bait, east side of jetties'
                   : 'e.g. Reds crushing topwater on the flat'}
                 placeholderTextColor={COLORS.textMuted}
                 value={description}
@@ -432,7 +432,7 @@ function PinDropModal({
               <Text style={s.modalLabel}>Species tag (optional)</Text>
               <TextInput
                 style={s.modalInput}
-                placeholder="e.g. menhaden, redfish, flounder"
+                placeholder="e.g. redfish, flounder, trout"
                 placeholderTextColor={COLORS.textMuted}
                 value={speciesTag}
                 onChangeText={setSpeciesTag}

@@ -74,7 +74,7 @@ export default function LoginScreen() {
           </View>
 
           <Text style={s.heroText}>
-            Your AI fishing guide for the Southeast coast.{'\n'}
+            Your personal fishing guide for the Southeast coast.{'\n'}
             Less guessing. More catching.
           </Text>
 
@@ -91,7 +91,7 @@ export default function LoginScreen() {
               <Text style={s.tierDetail}>• 3-day forecast dashboard</Text>
               <Text style={s.tierDetail}>• Live tides, weather, solunar</Text>
               <Text style={s.tierDetail}>• Species probability ratings</Text>
-              <Text style={s.tierDetail}>• 3 free AI reports to start</Text>
+              <Text style={s.tierDetail}>• 3 free reports to start</Text>
             </View>
 
             {/* ── Pro Monthly ── */}
@@ -115,7 +115,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color={COLORS.navy} style={{ marginTop: 12 }} />
               ) : (
                 <>
-                  <Text style={s.tierDetailPro}>• Unlimited AI fishing reports</Text>
+                  <Text style={s.tierDetailPro}>• Unlimited fishing reports</Text>
                   <Text style={s.tierDetailPro}>• GPS spot coordinates + navigation</Text>
                   <Text style={s.tierDetailPro}>• Relief shading + NOAA charts</Text>
                   <Text style={s.tierDetailPro}>• Push alerts — tides, weather, move timing</Text>

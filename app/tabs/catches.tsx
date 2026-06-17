@@ -148,7 +148,7 @@ export default function CatchesScreen() {
         photo.species ? `Species: ${photo.species}` : '',
         '',
         `Powered by ${APP_NAME} — No Guide Needed™`,
-        'Your AI fishing guide. No tip required.',
+        'Your personal fishing guide. No tip required.',
         '🔗 ngnfishing.com',
       ].filter(Boolean).join('\n');
 

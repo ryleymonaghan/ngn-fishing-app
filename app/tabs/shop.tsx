@@ -60,7 +60,7 @@ export default function ShopScreen() {
 
         {/* ── Header ──────────────────────── */}
         <Text style={s.screenTitle}>GEAR SHOP</Text>
-        <Text style={s.screenSub}>NGN merch + AI-recommended tackle</Text>
+        <Text style={s.screenSub}>NGN merch + recommended tackle</Text>
 
         {/* ── Section Toggle ──────────────── */}
         <View style={s.sectionToggle}>
@@ -240,7 +240,7 @@ export default function ShopScreen() {
             {displayProducts.length === 0 && (
               <View style={s.emptyBox}>
                 <Text style={s.emptyText}>No products in this category yet.</Text>
-                <Text style={s.emptySub}>More gear added weekly based on AI report recommendations.</Text>
+                <Text style={s.emptySub}>More gear added weekly based on report recommendations.</Text>
               </View>
             )}
           </View>

@@ -2,7 +2,7 @@
 // NGN Fishing — 72-Hour Forecast Briefing Service
 // Generates a personalized fishing forecast summary
 // using existing conditions data + user boat profile.
-// No separate AI call — pure logic from local data.
+// No separate model call — pure logic from local data.
 // Fast, free, and always available.
 // ─────────────────────────────────────────────
 

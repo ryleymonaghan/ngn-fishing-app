@@ -8,13 +8,13 @@ const { width: SCREEN_W } = Dimensions.get('window');
 
 const HOTSPOTS = [
   { id: 'breach-inlet-south', name: 'Breach Inlet — South Rip', shortName: 'Breach Inlet', lat: 32.7883, lng: -79.8231, depthFt: 6, type: 'Inlet Edge', tidePreference: ['incoming'], confirmedSightings: 12, notes: 'Inlet feeds with incoming — massive schools funnel through. Tarpon and cobia show here May–Sept.', predators: ['Tarpon', 'Cobia', 'Redfish', 'Spanish Mackerel'], accessType: 'Boat only', warning: 'Strong current — anchor well or drift.' },
-  { id: 'stono-creek-mouth', name: 'Stono River — Penny Creek Mouth', shortName: 'Penny Creek', lat: 32.6901, lng: -80.0378, depthFt: 4, type: 'Creek Mouth', tidePreference: ['incoming'], confirmedSightings: 8, notes: 'Best on incoming — pogies pour in with the tide. Redfish and flounder stack behind them.', predators: ['Redfish', 'Flounder', 'Black Drum'], accessType: 'Boat', warning: null },
+  { id: 'stono-creek-mouth', name: 'Stono River — Penny Creek Mouth', shortName: 'Penny Creek', lat: 32.6901, lng: -80.0378, depthFt: 4, type: 'Creek Mouth', tidePreference: ['incoming'], confirmedSightings: 8, notes: 'Best on incoming — bait pours in with the tide. Redfish and flounder stack behind them.', predators: ['Redfish', 'Flounder', 'Black Drum'], accessType: 'Boat', warning: null },
   { id: 'wappoo-cut-east', name: 'Wappoo Cut — East End Flat', shortName: 'Wappoo Cut', lat: 32.7456, lng: -79.9821, depthFt: 3, type: 'Flat / Channel Edge', tidePreference: ['incoming', 'slack'], confirmedSightings: 5, notes: 'Shallow flat with hard bottom. Schools push in on incoming, blow up at high slack.', predators: ['Redfish', 'Speckled Trout', 'Flounder'], accessType: 'Boat / Kayak', warning: 'Heavy boat traffic on weekends.' },
   { id: 'ashley-river-bridge', name: 'Ashley River — Bridge Pilings', shortName: 'Ashley Bridge', lat: 32.7621, lng: -79.9804, depthFt: 8, type: 'Structure', tidePreference: ['incoming', 'outgoing'], confirmedSightings: 6, notes: 'Structure holds schools during current push both ways. Sheepshead and drum stack on pilings.', predators: ['Sheepshead', 'Black Drum', 'Redfish'], accessType: 'Boat', warning: 'No wake zone.' },
   { id: 'folly-river-bend', name: 'Folly River — North Bend', shortName: 'Folly Bend', lat: 32.6672, lng: -79.9445, depthFt: 5, type: 'River Bend', tidePreference: ['outgoing'], confirmedSightings: 4, notes: 'Produces on outgoing as schools get pushed down the bend toward the inlet.', predators: ['Redfish', 'Flounder'], accessType: 'Boat / Kayak', warning: 'Shallow at low tide — draft < 2ft.' },
   { id: 'north-edisto-sandbars', name: 'North Edisto — Otter Island Bars', shortName: 'Otter Island', lat: 32.4912, lng: -80.3201, depthFt: 2, type: 'Sandbar', tidePreference: ['incoming'], confirmedSightings: 3, notes: 'Remote but productive. Schools push onto bars at high water.', predators: ['Redfish', 'Cobia', 'Tarpon'], accessType: 'Boat + Kayak', warning: 'Remote — 45 min from marina. No cell service.' },
   { id: 'charleston-harbor-drummond', name: 'Charleston Harbor — Drummond Point', shortName: 'Drummond Pt', lat: 32.7712, lng: -79.9398, depthFt: 3, type: 'Harbor Flat', tidePreference: ['incoming', 'slack'], confirmedSightings: 4, notes: 'Visible from the harbor on calm mornings. Productive year-round on warm days.', predators: ['Redfish', 'Speckled Trout', 'Black Drum'], accessType: 'Boat / Kayak', warning: 'Commercial shipping in channel — stay clear.' },
-  { id: 'stono-inlet-north', name: 'Stono Inlet — North Channel', shortName: 'Stono Inlet', lat: 32.6443, lng: -80.0891, depthFt: 10, type: 'Inlet Edge', tidePreference: ['incoming'], confirmedSightings: 2, notes: 'Offshore schools push in through inlet on incoming. Best June–Oct for large pogies.', predators: ['Cobia', 'King Mackerel', 'Tarpon'], accessType: 'Boat only', warning: 'Exposed inlet — check forecast before leaving dock.' },
+  { id: 'stono-inlet-north', name: 'Stono Inlet — North Channel', shortName: 'Stono Inlet', lat: 32.6443, lng: -80.0891, depthFt: 10, type: 'Inlet Edge', tidePreference: ['incoming'], confirmedSightings: 2, notes: 'Offshore schools push in through inlet on incoming. Best June–Oct for large bait schools.', predators: ['Cobia', 'King Mackerel', 'Tarpon'], accessType: 'Boat only', warning: 'Exposed inlet — check forecast before leaving dock.' },
 ] as const;
 
 function scoreTide(phase: string, h: number) { if(phase==='incoming'){if(h>=1&&h<=3)return 100;if(h>=0&&h<1)return 80;if(h>3&&h<=5)return 60;return 40;}if(phase==='slack')return 50;if(phase==='outgoing')return(6-h)<=2?45:25;return 0; }
@@ -42,7 +42,7 @@ export default function SpotsScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.timeline}>
         <View style={s.tlHeader}>
-          <Text style={s.tlLabel}>MENHADEN INTEL</Text>
+          <Text style={s.tlLabel}>BAIT INTEL</Text>
           <View style={s.pill}><View style={[s.dot,{backgroundColor:tideColor(cond.tidePhase)}]}/><Text style={s.pillText}>{cond.tidePhase.toUpperCase()} · {cond.windSpeed} KTS · {fmt(hour)}</Text></View>
         </View>
         <View style={s.phaseBar}>{Array.from({length:48},(_,i)=>{const c=getConditions(i*0.5);return <View key={i} style={[s.phaseSeg,{backgroundColor:tideColor(c.tidePhase)}]}/>;})}</View>
@@ -93,7 +93,7 @@ export default function SpotsScreen() {
               <Text style={s.mTitle}>{sel.name}</Text>
               <Text style={s.mMeta}>{sel.depthFt}FT · {sel.type.toUpperCase()} · {sel.accessType.toUpperCase()}</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={s.secLabel}>WHY MENHADEN ARE HERE NOW</Text>
+                <Text style={s.secLabel}>WHY BAIT IS HERE NOW</Text>
                 {sel.reasons.map((r,i)=>(<View key={i} style={s.reasonRow}><View style={[s.reasonBar,{backgroundColor:sel.tier.color}]}/><Text style={s.reasonText}>{r}</Text></View>))}
                 <Text style={s.secLabel}>PREDATORS FOLLOWING</Text>
                 <View style={s.tagRow}>{sel.predators.map(p=>(<View key={p} style={s.tag}><Text style={s.tagText}>{p}</Text></View>))}</View>

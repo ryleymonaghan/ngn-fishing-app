@@ -40,7 +40,7 @@ export default function WizardStep2() {
     if (!isPro) {
       Alert.alert(
         'Purchase Full Report',
-        `Free accounts include 3 AI reports. Subscribe for unlimited reports, GPS navigation, relief shading, and move alerts starting at $${PRICING.PRO_MONTHLY}/mo.`,
+        `Free accounts include 3 reports. Subscribe for unlimited reports, GPS navigation, relief shading, and move alerts starting at $${PRICING.PRO_MONTHLY}/mo.`,
         [
           { text: 'Maybe Later', style: 'cancel' },
           {
@@ -137,7 +137,7 @@ export default function WizardStep2() {
           </>
         )}
 
-        {/* AI Recommend */}
+        {/* Smart Recommend */}
         <TouchableOpacity
           style={s.aiRecommend}
           onPress={handleAiRecommend}
@@ -150,7 +150,7 @@ export default function WizardStep2() {
             <>
               <Text style={s.aiRecommendText}>TELL ME WHAT TO TARGET</Text>
               <Text style={s.aiRecommendSub}>
-                AI picks the best species for {draft.date} based on conditions
+                NGN picks the best species for {draft.date} based on conditions
               </Text>
             </>
           )}
@@ -224,7 +224,7 @@ export default function WizardStep2() {
 
         {isGenerating && (
           <Text style={s.generatingHint}>
-            Your AI guide is analyzing tides, solunar tables, and current conditions
+            Your guide is analyzing tides, solunar tables, and current conditions
             to recommend the best bait, rigs, and spots. This takes about 15–20 seconds.
           </Text>
         )}

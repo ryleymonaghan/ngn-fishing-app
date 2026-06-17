@@ -155,7 +155,7 @@ export default function WizardStep3() {
 
         {isGenerating && (
           <Text style={s.generatingHint}>
-            Your AI guide is analyzing tides, solunar tables, and current conditions.
+            Your guide is analyzing tides, solunar tables, and current conditions.
             This takes about 15–20 seconds.
           </Text>
         )}

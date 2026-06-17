@@ -352,7 +352,7 @@ export interface ShopProduct {
 }
 
 // ── Curated Products ─────────────────────────
-// These are hand-picked to match AI report recommendations.
+// These are hand-picked to match report recommendations.
 // URLs use search queries so they stay current as inventory changes.
 export const SHOP_PRODUCTS: ShopProduct[] = [
   // ── TERMINAL TACKLE ────────────────────
@@ -607,7 +607,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     brand: 'Betts / Ahi',
     category: 'bait',
     priceRange: '$30-80',
-    description: 'Catch your own live bait — shrimp, mullet, menhaden. 3/8" mesh for shrimp, 1/2" for mullet. The most cost-effective way to have fresh bait every trip.',
+    description: 'Catch your own live bait — shrimp, mullet, pogies. 3/8" mesh for shrimp, 1/2" for mullet. The most cost-effective way to have fresh bait every trip.',
     accessTypes: ['boat', 'kayak', 'shore', 'dock'],
     tags: ['cast net', 'bait', 'live bait', 'shrimp', 'mullet', 'net'],
     affiliateLinks: [

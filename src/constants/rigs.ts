@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────
 // NGN Fishing — Rig Assembly Guide Database
 // 14 essential rigs with step-by-step assembly instructions.
-// Tagged by access type and target species for AI report deep-linking.
+// Tagged by access type and target species for report deep-linking.
 // ─────────────────────────────────────────────
 
 export interface RigStep {

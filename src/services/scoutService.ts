@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────
 // NGN Fishing — Structure Scout Service
-// AI-powered nearby structure analysis from a dropped pin
+// Smart nearby structure analysis from a dropped pin
 // Uses Claude to identify depth pockets, bottom structure,
 // channels, and ledges near a user's pinned location.
 // ─────────────────────────────────────────────

@@ -65,7 +65,7 @@ export default function NotificationsScreen() {
   const [pinText, setPinText] = useState('');
 
   const QUICK_TAGS = [
-    'Menhaden here',
+    'Bait school here',
     'Spanish mackerel hitting surface',
     'School of reds',
     'Tarpon sighted',
@@ -216,7 +216,7 @@ export default function NotificationsScreen() {
               style={s.pinInput}
               value={pinText}
               onChangeText={setPinText}
-              placeholder="e.g. Menhaden here, birds working..."
+              placeholder="e.g. Bait school here, birds working..."
               placeholderTextColor={COLORS.textMuted}
               multiline
               maxLength={140}

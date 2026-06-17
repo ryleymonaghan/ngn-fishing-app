@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PATH=/opt/homebrew/bin:__TRACKED_VAR__ npx expo config --type public)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Bash(PATH=/opt/homebrew/bin:__TRACKED_VAR__ npx eas-cli env:create --environment production --name REVENUECAT_API_KEY --value test_THnAuegYkdRmuWAJXdrclQCbtUI --visibility sensitive --type string --force --non-interactive)",
+      "Bash(PATH=/opt/homebrew/bin:__TRACKED_VAR__ npx eas-cli env:list --environment production)",
+      "Bash(PATH=/opt/homebrew/bin:__TRACKED_VAR__ npx eas-cli build --platform ios --profile production)",
+      "Bash(PATH=/opt/homebrew/bin:__TRACKED_VAR__ npx eas-cli submit --platform ios --latest --non-interactive)"
+    ]
+  }
+}

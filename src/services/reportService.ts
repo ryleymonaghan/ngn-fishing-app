@@ -55,7 +55,7 @@ function buildPrompt(draft: WizardDraft, conditions: LiveConditions): string {
       `Angler's boat: ${draft.boatLengthFt ?? 24} ft.`
     : '';
 
-  // ── Access type descriptions for the AI ──
+  // ── Access type descriptions for the engine ──
   const accessDescriptions: Record<string, string> = {
     boat:  'a powerboat (center console / skiff) — full water access, can run to any spot',
     kayak: 'a kayak/canoe — paddle-powered, limited range, stay within a few miles of launch, avoid heavy boat traffic areas',
@@ -298,7 +298,7 @@ function parseReportJson(raw: string): Partial<FishingReport> {
   const start = clean.indexOf('{');
   const end   = clean.lastIndexOf('}');
   if (start === -1 || end === -1) {
-    throw new Error('No JSON object found in AI response. The model may have returned plain text instead of JSON.');
+    throw new Error('No JSON object found in model response. The model may have returned plain text instead of JSON.');
   }
 
   let jsonStr = clean.slice(start, end + 1);
@@ -320,7 +320,7 @@ function parseReportJson(raw: string): Partial<FishingReport> {
       // Provide a useful error message with a snippet of what we got
       const snippet = jsonStr.slice(0, 200);
       throw new Error(
-        `Failed to parse AI response as JSON. Response starts with: "${snippet}..."`
+        `Failed to parse model response as JSON. Response starts with: "${snippet}..."`
       );
     }
   }
