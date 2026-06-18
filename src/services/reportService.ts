@@ -18,6 +18,14 @@ const BACKEND_URL = Constants.expoConfig?.extra?.BACKEND_URL ?? 'https://ngn-fis
 // 3+ offshore species regularly exceeded 12288 and caused truncation.
 const REPORT_MAX_TOKENS = 16384;
 
+// ── Client request timeout ────────────────────────
+// A full report takes 30–60s to generate. The platform default fetch
+// timeout (≈60s on iOS URLSession) drops the connection mid-generation
+// and surfaces as "The network connection was lost." Give the request a
+// generous 120s ceiling via AbortController so a slow-but-healthy backend
+// has time to finish.
+const REQUEST_TIMEOUT_MS = 120_000;
+
 // ── Build Species Context ─────────────────────
 function buildSpeciesContext(speciesIds: string[]): string {
   const all = [...INSHORE_SPECIES, ...OFFSHORE_SPECIES];
@@ -224,10 +232,17 @@ IMPORTANT: Respond with ONLY a valid JSON object — no markdown fences, no expl
 // and trigger a 404 from Anthropic.
 async function callClaude(userPrompt: string): Promise<string> {
   let res: Response;
+
+  // Abort the request if the backend takes longer than REQUEST_TIMEOUT_MS so
+  // we surface a clear, actionable error instead of a generic dropped-socket.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
     res = await fetch(`${BACKEND_URL}/api/generate-report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         prompt:     userPrompt,
         system:     CLAUDE_CONFIG.SYSTEM_PROMPT,
@@ -237,10 +252,18 @@ async function callClaude(userPrompt: string): Promise<string> {
       }),
     });
   } catch (networkErr: any) {
+    if (networkErr?.name === 'AbortError') {
+      throw new Error(
+        `The report took longer than ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s and timed out. ` +
+        `This can happen on a slow connection or when the report server is busy — please try again.`
+      );
+    }
     throw new Error(
       `Couldn't reach the report server (${BACKEND_URL}). ` +
       `Check your connection and try again. (${networkErr?.message ?? 'network error'})`
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
